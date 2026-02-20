@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת שאלונים קליניים - מרפאת הטראומה הדסה</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Heebo',sans-serif;background:#0f172a;min-height:100vh}
+.app{max-width:1400px;margin:0 auto;background:#fff;min-height:100vh}
+
+/* Login */
+.login-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);padding:20px}
+.login-card{background:#fff;border-radius:20px;padding:40px;max-width:450px;width:100%;box-shadow:0 25px 50px rgba(0,0,0,.25);text-align:center}
+.login-logo{width:120px;height:120px;border-radius:12px;margin-bottom:16px;object-fit:contain}
+.login-title{font-size:1.5em;color:#1e3a5f;font-weight:800;margin-bottom:4px}
+.login-subtitle{color:#64748b;font-size:.9em;margin-bottom:24px}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;text-align:right}
+.login-field label{font-weight:600;color:#475569;font-size:.85em}
+.login-field input{padding:12px;border:2px solid #e2e8f0;border-radius:8px;font-size:1em;font-family:inherit}
+.login-field input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.login-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e3a5f,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:1.05em;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px}
+.login-btn:hover{opacity:.9}
+.login-error{color:#dc2626;font-size:.85em;margin-top:10px}
+
+/* Intake */
+.intake-bg{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);padding:20px}
+.intake-card{background:#fff;border-radius:20px;padding:40px;max-width:700px;width:100%;box-shadow:0 25px 50px rgba(0,0,0,.25)}
+.intake-header{text-align:center;margin-bottom:24px}
+.intake-header h1{font-size:1.5em;color:#1e3a5f;margin-bottom:4px}
+.intake-header p{color:#64748b;font-size:.9em}
+.intake-section{background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:16px}
+.intake-section h3{font-size:1em;color:#1e3a5f;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #3b82f6}
+.intake-section.examiner h3{border-bottom-color:#10b981}
+.intake-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px}
+.intake-field{display:flex;flex-direction:column;gap:5px}
+.intake-field label{font-weight:600;color:#475569;font-size:.82em}
+.intake-field input,.intake-field select{padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-size:.95em;font-family:inherit}
+.intake-field input:focus,.intake-field select:focus{outline:none;border-color:#3b82f6}
+.session-list{margin-top:12px}
+.session-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;padding:10px;background:#fff;border-radius:8px;border:1px solid #e2e8f0}
+.add-session-btn{padding:10px 20px;background:#10b981;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;margin-top:8px}
+.start-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e3a5f,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:1.1em;font-weight:700;cursor:pointer;font-family:inherit;margin-top:20px}
+.remove-btn{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:inherit;font-weight:600;font-size:.8em}
+
+/* Header */
+.hdr{background:linear-gradient(135deg,#1e3a5f,#0f172a);color:#fff;padding:16px 24px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.hdr-top{display:flex;flex-direction:column;align-items:center;gap:6px}
+.hdr-logo{width:80px;height:80px;border-radius:10px;object-fit:contain}
+.hdr-clinic-text{font-size:1em;font-weight:700;opacity:.95;text-align:center}
+.hdr-bottom{display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:10px}
+.hdr-info{flex:1;padding:0 16px;text-align:right}
+.hdr-info h1{font-size:1.2em;margin-bottom:2px}
+.hdr-info p{font-size:.8em;opacity:.85}
+.hdr-badges{display:flex;gap:8px;flex-wrap:wrap}
+.hdr-badge{background:rgba(255,255,255,.15);padding:4px 12px;border-radius:12px;font-size:.8em}
+.logout-btn{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;font-size:.85em}
+
+/* Main Menu Grid */
+.main-menu{padding:40px 20px;background:#f1f5f9;min-height:70vh}
+.menu-header{text-align:center;margin-bottom:40px}
+.menu-header h2{color:#1e293b;font-size:1.8em;margin-bottom:10px}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;max-width:1200px;margin:0 auto}
+.menu-card{background:#fff;border-radius:15px;padding:30px;text-align:center;cursor:pointer;transition:.3s;box-shadow:0 2px 8px rgba(0,0,0,.1);border:2px solid transparent}
+.menu-card:hover{transform:translateY(-4px);box-shadow:0 8px 16px rgba(0,0,0,.15);border-color:#3b82f6}
+.menu-card-icon{font-size:2.5em;margin-bottom:12px}
+.menu-card-title{font-size:1.1em;font-weight:700;color:#1e293b;margin-bottom:8px}
+.menu-card-desc{font-size:.85em;color:#64748b;line-height:1.4}
+.menu-card.completed::after{content:"✓";position:absolute;top:10px;right:10px;background:#22c55e;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.menu-card{position:relative}
+
+/* Tabs */
+.main-tabs{display:flex;background:#0c4a6e;flex-wrap:wrap;overflow-x:auto}
+.main-tab{padding:12px 16px;color:#94a3b8;cursor:pointer;border:none;background:none;font-size:.85em;font-weight:600;font-family:inherit;border-bottom:3px solid transparent;white-space:nowrap}
+.main-tab:hover{background:#1e40af;color:#e2e8f0}
+.main-tab.active{background:#1e3a5f;color:#fff;border-bottom-color:#3b82f6}
+.main-tab.results-active{background:#065f46;color:#fff;border-bottom-color:#10b981}
+.main-tab.diag-active{background:#831843;color:#fff;border-bottom-color:#ec4899}
+
+/* Session selector */
+.session-sel{display:flex;align-items:center;gap:10px;padding:10px 20px;background:#f1f5f9;border-bottom:1px solid #e2e8f0}
+.session-sel label{font-weight:600;color:#475569;font-size:.85em}
+.session-sel select{padding:6px 12px;border:2px solid #e2e8f0;border-radius:6px;font-family:inherit}
+.add-session-from-menu{padding:6px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;font-size:.85em;margin-left:10px}
+
+/* Content */
+.content{padding:20px;background:#f1f5f9;min-height:70vh}
+.section{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.section-title{color:#1e293b;font-size:1.05em;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:3px solid #3b82f6}
+
+/* Progress */
+.progress-wrap{background:#e2e8f0;height:8px;border-radius:4px;overflow:hidden;margin:10px 0}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.progress-fill.low{background:#94a3b8}
+.progress-fill.mid{background:#60a5fa}
+.progress-fill.high{background:#3b82f6}
+.progress-text{font-size:.82em;color:#64748b;display:flex;justify-content:space-between}
+
+/* Question items */
+.q-item{background:#fff;border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:12px;transition:.2s}
+.q-item.answered{border-color:#93c5fd;background:#eff6ff}
+.q-num{display:inline-block;background:#3b82f6;color:#fff;padding:3px 10px;border-radius:12px;font-weight:700;font-size:.8em;margin-left:8px}
+.q-text{font-size:.95em;font-weight:500;color:#1e293b;margin-bottom:10px;line-height:1.6}
+.q-options{display:flex;flex-wrap:wrap;gap:6px}
+.q-opt{padding:8px 14px;border-radius:8px;border:2px solid #e2e8f0;cursor:pointer;font-size:.82em;font-weight:500;font-family:inherit;background:#fff;transition:.2s}
+.q-opt:hover{border-color:#3b82f6;background:#eff6ff}
+.q-opt.selected{background:#60a5fa;color:#fff;border-color:#60a5fa}
+
+/* BDI-II specific */
+.bdi-item{background:#fff;border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:12px}
+.bdi-item.answered{border-color:#93c5fd;background:#eff6ff}
+.bdi-options{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.bdi-opt{padding:10px 14px;border-radius:8px;border:2px solid #e2e8f0;cursor:pointer;font-size:.85em;font-weight:500;font-family:inherit;background:#fff;transition:.2s;text-align:right}
+.bdi-opt:hover{border-color:#3b82f6;background:#eff6ff}
+.bdi-opt.selected{background:#60a5fa;color:#fff;border-color:#60a5fa}
+
+/* Slider for DES */
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;height:6px;accent-color:#3b82f6}
+.slider-val{background:#3b82f6;color:#fff;padding:4px 10px;border-radius:6px;font-weight:700;font-size:.85em;min-width:50px;text-align:center}
+
+/* LEC-5 */
+.lec-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;font-size:.7em;text-align:center;margin-top:8px}
+.lec-header{font-weight:700;color:#475569;padding:4px;background:#f1f5f9;border-radius:4px}
+.lec-cell{padding:6px 2px}
+.lec-cell input{cursor:pointer}
+
+/* Results */
+.result-card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;border-right:4px solid #3b82f6;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.result-card h3{color:#1e293b;font-size:1em;margin-bottom:12px}
+.score-display{font-size:2.2em;font-weight:800;color:#1e293b;margin-bottom:4px}
+.severity-badge{display:inline-block;padding:6px 16px;border-radius:8px;font-weight:700;font-size:.9em;margin-bottom:12px}
+.sev-normal{background:#dcfce7;color:#166534}
+.sev-mild{background:#fef9c3;color:#854d0e}
+.sev-moderate{background:#fed7aa;color:#9a3412}
+.sev-severe{background:#fecaca;color:#991b1b}
+.sev-verysevere{background:#991b1b;color:#fff}
+.subdomain{background:#f8fafc;border-radius:8px;padding:10px;margin-top:8px}
+.subdomain-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0}
+.subdomain-row:last-child{border:none}
+.subdomain-label{font-weight:600;color:#475569;font-size:.85em}
+.subdomain-val{font-weight:700;color:#1e293b}
+.bar-bg{flex:1;height:12px;background:#e2e8f0;border-radius:6px;margin:0 10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px}
+
+/* Diagnosis */
+.diag-search{padding:10px;border:2px solid #e2e8f0;border-radius:8px;width:100%;font-family:inherit;font-size:.95em;margin-bottom:16px}
+.diag-search:focus{outline:none;border-color:#ec4899}
+.diag-cat{margin-bottom:20px}
+.diag-cat-title{font-weight:700;color:#831843;font-size:.95em;margin-bottom:10px;padding:8px 12px;background:#fdf2f8;border-radius:8px;border-right:4px solid #ec4899}
+.diag-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.diag-item{padding:10px;background:#fff;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;transition:.2s;font-size:.82em}
+.diag-item:hover{border-color:#ec4899;background:#fdf2f8}
+.diag-item.selected{border-color:#ec4899;background:#fce7f3}
+.diag-code{font-weight:700;color:#831843;font-size:.9em}
+.diag-desc{color:#475569}
+.selected-diags{margin-top:16px;padding:16px;background:#fdf2f8;border-radius:12px}
+.selected-diags h4{color:#831843;margin-bottom:10px}
+.diag-tag{display:inline-flex;align-items:center;gap:6px;background:#ec4899;color:#fff;padding:6px 12px;border-radius:8px;margin:4px;font-size:.8em;font-weight:600}
+.diag-tag button{background:none;border:none;color:#fff;cursor:pointer;font-size:1.1em;font-weight:700}
+
+/* Criterion A */
+.crit-a-text{width:100%;min-height:80px;padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:.95em;resize:vertical}
+.crit-a-text:focus{outline:none;border-color:#3b82f6}
+.crit-a-options{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+
+/* Columbia risk */
+.risk-badge{padding:12px 20px;border-radius:12px;font-weight:700;font-size:1.1em;text-align:center;margin-top:16px}
+.risk-low{background:#dcfce7;color:#166534}
+.risk-moderate{background:#fef9c3;color:#854d0e}
+.risk-high{background:#fecaca;color:#991b1b}
+
+/* Export */
+.export-btn{padding:12px 24px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;font-size:1em;margin:10px 5px}
+.back-btn{padding:12px 24px;background:#64748b;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;font-size:1em;margin:10px 5px}
+
+@media(max-width:768px){
+  .main-tabs{overflow-x:auto}
+  .intake-row{grid-template-columns:1fr}
+  .lec-grid{grid-template-columns:repeat(3,1fr);font-size:.65em}
+  .q-options{flex-direction:column}
+  .menu-grid{grid-template-columns:1fr}
+}
+/* Big Menu Buttons */
+.big-menu{padding:40px 20px;background:#f1f5f9;min-height:70vh;display:flex;flex-direction:column;align-items:center}
+.big-menu h2{color:#1e293b;font-size:1.8em;margin-bottom:30px;text-align:center}
+.big-menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:600px;width:100%;margin:0 auto}
+.big-menu-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;border-radius:18px;border:none;cursor:pointer;font-family:inherit;transition:.3s;box-shadow:0 4px 12px rgba(0,0,0,.12);min-height:160px}
+.big-menu-btn:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.big-menu-btn .big-icon{font-size:3em;margin-bottom:12px}
+.big-menu-btn .big-label{font-size:1.2em;font-weight:700;color:#fff}
+.big-menu-btn .big-sublabel{font-size:.8em;color:rgba(255,255,255,.85);margin-top:4px}
+.big-menu-btn.btn-questionnaires{background:linear-gradient(135deg,#3b82f6,#1d4ed8)}
+.big-menu-btn.btn-results{background:linear-gradient(135deg,#10b981,#065f46)}
+.big-menu-btn.btn-codes{background:linear-gradient(135deg,#ec4899,#831843)}
+.big-menu-btn.btn-sessions{background:linear-gradient(135deg,#f59e0b,#b45309)}
+
+/* Session management */
+.session-mgmt{padding:20px;background:#f1f5f9;min-height:70vh}
+.session-mgmt h2{text-align:center;color:#1e293b;margin-bottom:20px}
+.session-list-container{max-width:700px;margin:0 auto}
+.session-item{display:flex;align-items:center;justify-content:space-between;background:#fff;padding:16px 20px;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);border:2px solid transparent;cursor:pointer;transition:.2s}
+.session-item:hover{border-color:#3b82f6;background:#eff6ff}
+.session-item.active-session{border-color:#3b82f6;background:#eff6ff}
+.session-item-info{display:flex;flex-direction:column;gap:4px}
+.session-item-date{font-weight:700;color:#1e293b;font-size:1.05em}
+.session-item-type{font-size:.85em;color:#64748b}
+.add-session-card{display:flex;align-items:center;justify-content:center;background:#fff;padding:20px;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);border:2px dashed #94a3b8;cursor:pointer;transition:.2s;gap:10px;color:#64748b;font-weight:600;font-size:1em}
+.add-session-card:hover{border-color:#3b82f6;color:#3b82f6;background:#eff6ff}
+.session-form{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+.session-form h3{font-size:1em;color:#1e293b;margin-bottom:12px}
+
+/* Deselect button */
+.deselect-btn{padding:6px 14px;border-radius:8px;border:2px solid #94a3b8;cursor:pointer;font-size:.82em;font-weight:600;font-family:inherit;background:#fff;color:#64748b;transition:.2s;margin-right:auto}
+.deselect-btn:hover{background:#f1f5f9;border-color:#64748b}
+
+/* Export section at questionnaire end */
+.export-section{margin-top:30px;border-top:2px solid #e2e8f0;padding-top:24px;text-align:center}
+.export-section h3{color:#1e293b;font-size:1.1em;margin-bottom:16px}
+.result-summary{background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center}
+.result-summary .score-big{font-size:2.5em;font-weight:800;color:#1e293b}
+.result-summary .severity-inline{display:inline-block;padding:6px 16px;border-radius:8px;font-weight:700;font-size:.9em;margin-top:8px}
+
+@media(max-width:768px){
+  .big-menu-grid{grid-template-columns:1fr}
+  .big-menu-btn{min-height:120px;padding:30px 20px}
+}
+
+
+/* Password toggle */
+.password-wrapper{position:relative}
+.password-wrapper input{width:100%;padding-left:40px}
+.pass-toggle{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.1em;padding:4px}
+.pass-toggle:hover{color:#475569}
+
+/* Skipped question indicator */
+.q-item.skipped{border-color:#fca5a5;background:#fef2f2}
+.bdi-item.skipped{border-color:#fca5a5;background:#fef2f2}
+.skipped-label{display:inline-block;font-size:.75em;color:#dc2626;font-weight:500;margin-top:6px;padding:2px 8px;background:#fee2e2;border-radius:4px}
+
+/* Clear questionnaire button */
+.clear-q-btn{padding:8px 18px;background:#fff;color:#dc2626;border:2px solid #fca5a5;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;font-size:.85em;transition:.2s}
+.clear-q-btn:hover{background:#fef2f2;border-color:#dc2626}
+
+/* Utility toolbar */
+.utility-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 24px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.util-btn{padding:8px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-family:inherit;font-weight:600;font-size:.8em;transition:.2s;color:#475569;display:flex;align-items:center;gap:6px}
+.util-btn:hover{background:#f1f5f9;border-color:#94a3b8}
+.util-btn.danger{color:#dc2626;border-color:#fca5a5}
+.util-btn.danger:hover{background:#fef2f2;border-color:#dc2626}
+
+/* Edit intake modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal-card{background:#fff;border-radius:16px;padding:30px;max-width:600px;width:100%;box-shadow:0 25px 50px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
+.modal-card h2{color:#1e3a5f;font-size:1.3em;margin-bottom:20px;text-align:center}
+.modal-actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
+
+/* Top Navigation Tabs */
+.top-nav{display:flex;background:#0c4a6e;flex-wrap:wrap;overflow-x:auto;border-bottom:2px solid #1e3a5f}
+.top-nav-tab{padding:12px 20px;color:#94a3b8;cursor:pointer;border:none;background:none;font-size:.88em;font-weight:600;font-family:inherit;border-bottom:3px solid transparent;white-space:nowrap;transition:.2s}
+.top-nav-tab:hover{background:rgba(255,255,255,.1);color:#e2e8f0}
+.top-nav-tab.active{color:#fff;border-bottom-color:#3b82f6;background:rgba(59,130,246,.15)}
+
+/* Domain sections in questionnaire menu */
+.domain-section{margin-bottom:24px}
+.domain-title{font-size:1em;font-weight:700;color:#1e3a5f;padding:10px 16px;background:#eff6ff;border-radius:10px;margin-bottom:12px;border-right:4px solid #3b82f6}
+.domain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+
+/* F-code suggestions */
+.suggestion-card{background:#fef9c3;border:2px solid #facc15;border-radius:12px;padding:16px;margin-bottom:12px}
+.suggestion-card h4{color:#854d0e;font-size:.95em;margin-bottom:8px}
+.suggestion-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0}
+.suggestion-code{font-weight:700;color:#831843;font-size:.9em}
+.suggestion-label{flex:1;padding:0 12px;font-size:.85em;color:#475569}
+.suggestion-source{font-size:.75em;color:#94a3b8;padding:0 8px}
+.add-diag-btn{padding:6px 14px;background:#ec4899;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;font-size:.8em}
+.add-diag-btn:hover{background:#db2777}
+.add-diag-btn.added{background:#94a3b8;cursor:default}
+.auto-suggest-btn{padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;font-size:.95em;margin-bottom:16px}
+.auto-suggest-btn:hover{opacity:.9}
+
+/* F-code search and browsable list */
+.fcode-category{margin-bottom:16px}
+.fcode-cat-title{font-weight:700;color:#831843;font-size:.9em;padding:8px 12px;background:#fdf2f8;border-radius:8px;border-right:4px solid #ec4899;margin-bottom:8px}
+.fcode-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px}
+.fcode-item{padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;transition:.2s;font-size:.8em;display:flex;align-items:center;gap:8px}
+.fcode-item:hover{border-color:#ec4899;background:#fdf2f8}
+.fcode-item.selected{border-color:#ec4899;background:#fce7f3}
+
+@media print{
+  .main-tabs,.hdr-bottom,.session-sel,.logout-btn,.back-btn,.export-btn,.top-nav,.utility-bar,.clear-q-btn{display:none!important}
+  .hdr{background:#fff!important;color:#1e3a5f!important;padding:10px!important;border-bottom:2px solid #1e3a5f}
+  .hdr-top{display:flex!important}
+  .hdr-logo{width:60px!important;height:60px!important}
+  .hdr-clinic-text{color:#1e3a5f!important;font-size:.9em!important}
+  .content{padding:10px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const {useState, useEffect, useRef, useCallback} = React;
+
+const LOGO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAUEBAQEAwUEBAQGBQUGCA0ICAcHCBALDAkNExAUExIQEhIUFx0ZFBYcFhISGiMaHB4fISEhFBkkJyQgJh0gISD/2wBDAQUGBggHCA8ICA8gFRIVICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICD/wAARCAEsAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD7LooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK8U+LPxZ8R+A/F1ro+j2WmzwTWSXLNdRyMwYySLgbXUYwg7ete118qftH/APJStO/7BUf/AKOm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AfuMM9B1rnP+FI/DD/oWf/J24/8AjlfW5bnNDCYdUqibavtb/M+WzDKK+JxDqwas+9/8j4yor7N/4Uj8MP8AoWf/ACduP/jlH/Ckfhh/0LP/AJO3H/xyvS/1jwv8svuX+Zwf6v4n+aP3v/I+MqK+zf8AhSPww/6Fn/yduP8A45R/wpH4Yf8AQs/+Ttx/8co/1jwv8svuX+Yf6v4n+aP3v/I+MqK+zf8AhSPww/6Fn/yduP8A45R/wpH4Yf8AQs/+Ttx/8co/1jwv8svuX+Yf6v4n+aP3v/I+MqK+zf8AhSPww/6Fn/yduP8A45R/wpH4Yf8AQs/+Ttx/8co/1jwv8svuX+Yf6v4n+aP3v/I+MqK+zf8AhSPww/6Fn/yduP8A45R/wpH4Yf8AQs/+Ttx/8co/1jwv8svuX+Yf6v4n+aP3v/I8Y/Zw/wCSlaj/ANgqT/0dDX1XXKeG/h34O8I6nJqXh7R/sV1JEYGk+0SyZQkMRh2I6qPyrq6+UzPFwxeIdWmmlZbn0+W4WeFoeyqNXv0CiiivLPSCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9k=";
+
+// ==================== BDI-II QUESTIONNAIRE ====================
+
+const BDI2 = {
+  name: "BDI-II",
+  fullName: "שאלון בק לדיכאון - BDI-II",
+  description: "אנא בחר את המשפט שהכי משקף את מצבך בשבועות האחרונים",
+  items: [
+    {q: "עצבות", opts: [
+      {v:0, l:"אינני עצוב/ה"},
+      {v:1, l:"אני עצוב/ה הרבה מהזמן"},
+      {v:2, l:"אני עצוב/ה כל הזמן"},
+      {v:3, l:"אני כל כך עצוב/ה או אומלל/ה שאני לא יכול/ה לסבול את זה"}
+    ]},
+    {q: "פסימיות", opts: [
+      {v:0, l:"אינני מיואש/ת לגבי העתיד שלי"},
+      {v:1, l:"אני מרגיש/ה מיואש/ת יותר מבעבר לגבי העתיד שלי"},
+      {v:2, l:"אני לא מצפה שדברים יסתדרו בשבילי"},
+      {v:3, l:"אני מרגיש/ה שהעתיד שלי חסר תקווה ושדברים רק ילכו ויחמירו"}
+    ]},
+    {q: "כישלונות בעבר", opts: [
+      {v:0, l:"אינני מרגיש/ה ככישלון"},
+      {v:1, l:"נכשלתי יותר ממה שהייתי צריך/ה"},
+      {v:2, l:"כשאני מסתכל/ת לאחור, אני רואה הרבה כישלונות"},
+      {v:3, l:"אני מרגיש/ה שאני כישלון מוחלט כאדם"}
+    ]},
+    {q: "אובדן הנאה", opts: [
+      {v:0, l:"אני מקבל/ת הנאה כמו תמיד מדברים שאני נהנה מהם"},
+      {v:1, l:"אני לא נהנה מדברים כמו פעם"},
+      {v:2, l:"אני מקבל/ת מעט מאוד הנאה מדברים שפעם נהניתי מהם"},
+      {v:3, l:"אני לא יכול/ה לקבל הנאה מדברים שפעם נהניתי מהם"}
+    ]},
+    {q: "רגשות אשמה", opts: [
+      {v:0, l:"אינני מרגיש/ה אשם/ה במיוחד"},
+      {v:1, l:"אני מרגיש/ה אשם/ה על הרבה דברים שעשיתי או שהייתי צריך/ה לעשות"},
+      {v:2, l:"אני מרגיש/ה אשם/ה רוב הזמן"},
+      {v:3, l:"אני מרגיש/ה אשם/ה כל הזמן"}
+    ]},
+    {q: "תחושת עונש", opts: [
+      {v:0, l:"אינני מרגיש/ה שאני נענוש/ת"},
+      {v:1, l:"אני מרגיש/ה שאולי אני נענוש/ת"},
+      {v:2, l:"אני מצפה להיענש"},
+      {v:3, l:"אני מרגיש/ה שאני נענוש/ת"}
+    ]},
+    {q: "חוסר שביעות רצון עצמית", opts: [
+      {v:0, l:"אני מרגיש/ה כלפי עצמי כמו תמיד"},
+      {v:1, l:"איבדתי ביטחון בעצמי"},
+      {v:2, l:"אני מאוכזב/ת מעצמי"},
+      {v:3, l:"אני לא אוהב/ת את עצמי"}
+    ]},
+    {q: "ביקורת עצמית", opts: [
+      {v:0, l:"אינני מבקר/ת או מאשים/ה את עצמי יותר מהרגיל"},
+      {v:1, l:"אני ביקורתי/ת כלפי עצמי יותר מבעבר"},
+      {v:2, l:"אני מבקר/ת את עצמי על כל הפגמים שלי"},
+      {v:3, l:"אני מאשים/ה את עצמי על כל דבר רע שקורה"}
+    ]},
+    {q: "מחשבות אובדניות", opts: [
+      {v:0, l:"אין לי מחשבות על להרוג את עצמי"},
+      {v:1, l:"יש לי מחשבות על להרוג את עצמי אבל לא הייתי מבצע/ת אותן"},
+      {v:2, l:"הייתי רוצה להרוג את עצמי"},
+      {v:3, l:"הייתי הורג/ת את עצמי אם הייתה לי הזדמנות"}
+    ]},
+    {q: "בכי", opts: [
+      {v:0, l:"אינני בוכה יותר מבעבר"},
+      {v:1, l:"אני בוכה יותר מבעבר"},
+      {v:2, l:"אני בוכה על כל דבר קטן"},
+      {v:3, l:"אני מרגיש/ה שאני רוצה לבכות אבל לא יכול/ה"}
+    ]},
+    {q: "חוסר מנוחה", opts: [
+      {v:0, l:"אינני חסר/ת מנוחה או מתוח/ה יותר מהרגיל"},
+      {v:1, l:"אני מרגיש/ה חסר/ת מנוחה או מתוח/ה יותר מהרגיל"},
+      {v:2, l:"אני כל כך חסר/ת מנוחה שקשה לי לשבת בשקט"},
+      {v:3, l:"אני כל כך חסר/ת מנוחה שאני חייב/ת לזוז או לעשות משהו כל הזמן"}
+    ]},
+    {q: "אובדן עניין", opts: [
+      {v:0, l:"לא איבדתי עניין באנשים אחרים או בפעילויות"},
+      {v:1, l:"אני פחות מתעניין/ת באנשים או בדברים מבעבר"},
+      {v:2, l:"איבדתי את רוב העניין שלי באנשים אחרים או בדברים"},
+      {v:3, l:"קשה לי להתעניין בכלל במשהו"}
+    ]},
+    {q: "חוסר החלטיות", opts: [
+      {v:0, l:"אני מקבל/ת החלטות כמו תמיד"},
+      {v:1, l:"קשה לי יותר מבעבר לקבל החלטות"},
+      {v:2, l:"קשה לי הרבה יותר לקבל החלטות מבעבר"},
+      {v:3, l:"יש לי קושי לקבל כל החלטה"}
+    ]},
+    {q: "חוסר ערך עצמי", opts: [
+      {v:0, l:"אינני מרגיש/ה חסר/ת ערך"},
+      {v:1, l:"אינני רואה את עצמי בעל/ת ערך ושימושי/ת כמו פעם"},
+      {v:2, l:"אני מרגיש/ה חסר/ת ערך בהשוואה לאחרים"},
+      {v:3, l:"אני מרגיש/ה חסר/ת ערך לחלוטין"}
+    ]},
+    {q: "אובדן אנרגיה", opts: [
+      {v:0, l:"יש לי אנרגיה כמו תמיד"},
+      {v:1, l:"יש לי פחות אנרגיה מבעבר"},
+      {v:2, l:"אין לי מספיק אנרגיה לעשות הרבה"},
+      {v:3, l:"אין לי מספיק אנרגיה לעשות שום דבר"}
+    ]},
+    {q: "שינויים בשינה", opts: [
+      {v:0, l:"לא חל שינוי בהרגלי השינה שלי"},
+      {v:1, l:"אני ישן/ה מעט יותר או מעט פחות מהרגיל"},
+      {v:2, l:"אני ישן/ה הרבה יותר או הרבה פחות מהרגיל"},
+      {v:3, l:"אני ישן/ה רוב שעות היום או מתעורר/ת מוקדם מדי"}
+    ]},
+    {q: "עצבנות", opts: [
+      {v:0, l:"אינני עצבני/ת יותר מהרגיל"},
+      {v:1, l:"אני עצבני/ת יותר מהרגיל"},
+      {v:2, l:"אני עצבני/ת הרבה יותר מהרגיל"},
+      {v:3, l:"אני עצבני/ת כל הזמן"}
+    ]},
+    {q: "שינויים בתיאבון", opts: [
+      {v:0, l:"לא חל שינוי בתיאבון שלי"},
+      {v:1, l:"התיאבון שלי מעט גדול או מעט קטן יותר מהרגיל"},
+      {v:2, l:"התיאבון שלי הרבה יותר גדול או הרבה יותר קטן מהרגיל"},
+      {v:3, l:"אין לי תיאבון כלל או יש לי תשוקה לאוכל כל הזמן"}
+    ]},
+    {q: "קושי בריכוז", opts: [
+      {v:0, l:"אני יכול/ה להתרכז כמו תמיד"},
+      {v:1, l:"אני לא יכול/ה להתרכז כמו תמיד"},
+      {v:2, l:"קשה לי לשמור את דעתי על משהו לאורך זמן"},
+      {v:3, l:"אני מוצא/ת שאני לא יכול/ה להתרכז בשום דבר"}
+    ]},
+    {q: "עייפות", opts: [
+      {v:0, l:"אינני עייף/ה יותר מהרגיל"},
+      {v:1, l:"אני מתעייף/ת מהר יותר מהרגיל"},
+      {v:2, l:"אני עייף/ה מדי כדי לעשות הרבה דברים שנהגתי לעשות"},
+      {v:3, l:"אני עייף/ה מדי כדי לעשות את רוב הדברים שנהגתי לעשות"}
+    ]},
+    {q: "אובדן עניין במין", opts: [
+      {v:0, l:"לא שמתי לב לשינוי בעניין שלי במין"},
+      {v:1, l:"אני פחות מתעניין/ת במין מבעבר"},
+      {v:2, l:"אני הרבה פחות מתעניין/ת במין כעת"},
+      {v:3, l:"איבדתי עניין במין לחלוטין"}
+    ]}
+  ],
+  scoring: (answers) => {
+    const sum = Object.values(answers).reduce((a,b) => a + (parseInt(b)||0), 0);
+    let sev = "מינימלי", cls = "sev-normal";
+    if(sum >= 29) { sev = "חמור"; cls = "sev-severe"; }
+    else if(sum >= 20) { sev = "בינוני"; cls = "sev-moderate"; }
+    else if(sum >= 14) { sev = "קל"; cls = "sev-mild"; }
+    return {total: sum, max: 63, severity: sev, cls, subdomains: [{name:"דיכאון", score: sum, max: 63}]};
+  }
+};
+
+// ==================== REST OF QUESTIONNAIRE DATA ====================
+
+const PHQ9 = {
+  name: "PHQ-9",
+  fullName: "שאלון בריאות המטופל - PHQ-9",
+  description: "שאלון לאיתור דיכאון",
+  scale: [{v:0,l:"כלל לא"},{v:1,l:"מספר ימים"},{v:2,l:"יותר ממחצית הימים"},{v:3,l:"כמעט כל יום"}],
+  items: [
+    "עניין או הנאה מועטים בעשיית דברים",
+    "תחושת דיכאון, מצב רוח ירוד או ייאוש",
+    "קושי להירדם או לישון ברציפות, או שינה מרובה מדי",
+    "תחושת עייפות או חוסר אנרגיה",
+    "תיאבון מועט או אכילת יתר",
+    "תחושה רעה כלפי עצמך - או תחושה שאתה כישלון או שאיכזבת את עצמך או את משפחתך",
+    "קושי להתרכז בדברים, כגון קריאת עיתון או צפייה בטלוויזיה",
+    "תנועה או דיבור אטיים מאוד שאנשים אחרים עשויים להבחין בכך. או ההפך - חוסר מנוחה או אי-שקט כה רבים שגרמו לך לנוע הרבה יותר מהרגיל",
+    "מחשבות שעדיף לך למות, או מחשבות לפגוע בעצמך באיזשהו אופן"
+  ],
+  scoring: (answers) => {
+    const sum = Object.values(answers).reduce((a,b) => a + (parseInt(b)||0), 0);
+    let sev = "מינימלי", cls = "sev-normal";
+    if(sum >= 20) { sev = "חמור"; cls = "sev-verysevere"; }
+    else if(sum >= 15) { sev = "בינוני-חמור"; cls = "sev-severe"; }
+    else if(sum >= 10) { sev = "בינוני"; cls = "sev-moderate"; }
+    else if(sum >= 5) { sev = "קל"; cls = "sev-mild"; }
+    return {total: sum, max: 27, severity: sev, cls, subdomains: [{name:"דיכאון", score: sum, max: 27}]};
+  }
+};
+
+const GAD7 = {
+  name: "GAD-7",
+  fullName: "שאלון חרדה מוכללת - GAD-7",
+  description: "שאלון לאיתור חרדה",
+  scale: [{v:0,l:"כלל לא"},{v:1,l:"מספר ימים"},{v:2,l:"יותר ממחצית הימים"},{v:3,l:"כמעט כל יום"}],
+  items: [
+    "תחושת עצבנות, חרדה או מתיחות",
+    "חוסר יכולת להפסיק לדאוג או לשלוט בדאגה",
+    "דאגה מופרזת לגבי דברים שונים",
+    "קושי להירגע",
+    "חוסר מנוחה כה רב שקשה לשבת במקום",
+    "להיות עצבני/ת או רגיז/ה בקלות",
+    "תחושת פחד כאילו משהו נורא עומד לקרות"
+  ],
+  scoring: (answers) => {
+    const sum = Object.values(answers).reduce((a,b) => a + (parseInt(b)||0), 0);
+    let sev = "מינימלי", cls = "sev-normal";
+    if(sum >= 15) { sev = "חמור"; cls = "sev-severe"; }
+    else if(sum >= 10) { sev = "בינוני"; cls = "sev-moderate"; }
+    else if(sum >= 5) { sev = "קל"; cls = "sev-mild"; }
+    return {total: sum, max: 21, severity: sev, cls, subdomains: [{name:"חרדה", score: sum, max: 21}]};
+  }
+};
+
+const DASS21 = {
+  name: "DASS-21",
+  fullName: "סולם דיכאון, חרדה ולחץ - DASS-21",
+  description: "אנא ציין עד כמה כל אחד מהמשפטים הבאים התאים לך במהלך השבוע האחרון",
+  scale: [{v:0,l:"לא התאים לי כלל"},{v:1,l:"התאים לי במידה מסוימת"},{v:2,l:"התאים לי במידה ניכרת"},{v:3,l:"התאים לי מאוד, רוב הזמן"}],
+  items: [
+    "מצאתי שקשה לי להירגע",
+    "הייתי מודע/ת ליובש בפה שלי",
+    "לא יכולתי לחוות שום רגש חיובי כלל",
+    "חוויתי קושי בנשימה (למשל נשימה מהירה מדי, קוצר נשימה ללא מאמץ פיזי)",
+    "מצאתי שקשה לי ליזום פעילות כלשהי",
+    "הייתה לי נטייה להגיב יתר על המידה למצבים",
+    "חוויתי רעד (למשל בידיים)",
+    "הרגשתי שאני משתמש/ת באנרגיה עצבנית רבה",
+    "דאגתי לגבי מצבים שבהם אני עלול/ה להיכנס לפאניקה ולעשות מעצמי צחוק",
+    "הרגשתי שאין לי למה לצפות",
+    "מצאתי את עצמי מתרגש/ת",
+    "מצאתי שקשה לי להירגע",
+    "הרגשתי עצוב/ה ומדוכא/ת",
+    "לא סבלתי דבר שעמד בדרכי לסיים מה שעשיתי",
+    "הרגשתי שאני קרוב/ה לפאניקה",
+    "לא יכולתי להתלהב משום דבר",
+    "הרגשתי שאני לא שווה הרבה כאדם",
+    "הרגשתי שאני די רגיש/ת",
+    "הייתי מודע/ת לפעולת הלב שלי בהיעדר מאמץ פיזי",
+    "הרגשתי פחד ללא סיבה טובה",
+    "הרגשתי שהחיים חסרי משמעות"
+  ],
+  scoring: (answers) => {
+    const dIdx = [2,4,9,12,15,16,20];
+    const aIdx = [1,3,6,8,14,18,19];
+    const sIdx = [0,5,7,10,11,13,17];
+    const sumOf = (idxs) => idxs.reduce((a,i) => a + (parseInt(answers[i])||0), 0) * 2;
+    const d = sumOf(dIdx), a = sumOf(aIdx), s = sumOf(sIdx);
+    const sevD = d <= 9 ? "תקין" : d <= 13 ? "קל" : d <= 20 ? "בינוני" : d <= 27 ? "חמור" : "חמור מאוד";
+    const sevA = a <= 7 ? "תקין" : a <= 9 ? "קל" : a <= 14 ? "בינוני" : a <= 19 ? "חמור" : "חמור מאוד";
+    const sevS = s <= 14 ? "תקין" : s <= 18 ? "קל" : s <= 25 ? "בינוני" : s <= 33 ? "חמור" : "חמור מאוד";
+    const total = d + a + s;
+    let cls = "sev-normal";
+    if(d > 20 || a > 14 || s > 25) cls = "sev-severe";
+    else if(d > 13 || a > 9 || s > 18) cls = "sev-moderate";
+    else if(d > 9 || a > 7 || s > 14) cls = "sev-mild";
+    return {total, max: 126, severity: `ד:${sevD} | ח:${sevA} | ל:${sevS}`, cls,
+      subdomains: [{name:"דיכאון (Depression)", score: d, max: 42, severity: sevD},
+                   {name:"חרדה (Anxiety)", score: a, max: 42, severity: sevA},
+                   {name:"לחץ (Stress)", score: s, max: 42, severity: sevS}]};
+  }
+};
+
+const PCL5 = {
+  name: "PCL-5",
+  fullName: "שאלון PTSD - PCL-5",
+  description: "קריטריון A: תאר/י בקצרה את האירוע הטראומטי. לאחר מכן, ענה/י על השאלות הבאות לפי מידת ההטרדה בחודש האחרון.",
+  hasCriterionA: true,
+  scale: [{v:0,l:"כלל לא"},{v:1,l:"מעט"},{v:2,l:"במידה בינונית"},{v:3,l:"במידה רבה"},{v:4,l:"במידה רבה מאוד"}],
+  items: [
+    "זיכרונות חוזרים, מטרידים ולא רצויים של החוויה המלחיצה",
+    "חלומות חוזרים ומטרידים של החוויה המלחיצה",
+    "פתאום הרגשת או פעלת כאילו החוויה המלחיצה קורה שוב (כאילו אתה שם מחדש)",
+    "הרגשת מצוקה רבה כשמשהו הזכיר לך את החוויה המלחיצה",
+    "תגובות גופניות חזקות כשמשהו הזכיר לך את החוויה המלחיצה (למשל דפיקות לב, קושי בנשימה, הזעה)",
+    "הימנעות מזיכרונות, מחשבות או רגשות הקשורים לחוויה המלחיצה",
+    "הימנעות מגירויים חיצוניים המזכירים את החוויה המלחיצה (אנשים, מקומות, שיחות, פעילויות, חפצים, מצבים)",
+    "קושי לזכור חלקים חשובים מהחוויה המלחיצה",
+    "אמונות שליליות חזקות לגבי עצמך, אחרים או העולם (למשל: אני רע, אי אפשר לסמוך על אף אחד, העולם מסוכן)",
+    "האשמת עצמך או אחרים בחוויה המלחיצה או בתוצאותיה",
+    "רגשות שליליים חזקים כמו פחד, אימה, כעס, אשמה או בושה",
+    "אובדן עניין בפעילויות שנהגת ליהנות מהן",
+    "תחושת ריחוק או ניתוק מאנשים אחרים",
+    "קושי לחוות רגשות חיוביים (למשל חוסר יכולת להרגיש אושר, אהבה)",
+    "התנהגות עצבנית, התפרצויות זעם, או התנהגות תוקפנית",
+    "לקיחת סיכונים מיותרים או התנהגות שעלולה לפגוע בך",
+    "תחושת עירנות יתר, דריכות או היות על המשמר",
+    "תחושת בהלה או הפתעה בקלות",
+    "קושי בריכוז",
+    "בעיות שינה (למשל קושי להירדם, שינה לא רציפה, שינה לא שקטה)"
+  ],
+  scoring: (answers) => {
+    const sum = Object.values(answers).reduce((a,b) => a + (parseInt(b)||0), 0);
+    const sub = (idxs, name) => ({name, score: idxs.reduce((a,i) => a + (parseInt(answers[i])||0), 0), max: idxs.length * 4});
+    let sev = "תקין", cls = "sev-normal";
+    if(sum >= 33) { sev = "סביר PTSD"; cls = "sev-severe"; }
+    else if(sum >= 31) { sev = "חשד ל-PTSD"; cls = "sev-moderate"; }
+    else if(sum >= 20) { sev = "תסמינים בינוניים"; cls = "sev-mild"; }
+    return {total: sum, max: 80, severity: sev, cls,
+      subdomains: [
+        sub([0,1,2,3,4], "חודרנות (Intrusion) B"),
+        sub([5,6], "הימנעות (Avoidance) C"),
+        sub([7,8,9,10,11,12,13], "שינויים שליליים בקוגניציה ומצב רוח D"),
+        sub([14,15,16,17,18,19], "עוררות ותגובתיות (Arousal) E")
+      ]};
+  }
+};
+
+const OCIR = {
+  name: "OCI-R",
+  fullName: "שאלון אובססיבי-קומפולסיבי מתוקצר - OCI-R",
+  description: "להלן רשימת חוויות שיש לאנשים רבים בחיי היומיום. אנא ציין עד כמה החוויה הבאה הטרידה או הציקה לך בחודש האחרון",
+  scale: [{v:0,l:"כלל לא"},{v:1,l:"מעט"},{v:2,l:"במידה בינונית"},{v:3,l:"במידה רבה"},{v:4,l:"במידה רבה מאוד"}],
+  items: [
+    "אגרתי כל כך הרבה דברים שהם מפריעים לי",
+    "אני בודק/ת דברים לעיתים קרובות יותר מהנדרש",
+    "אני מתרגז/ת אם חפצים לא מסודרים כראוי",
+    "אני מרגיש/ה צורך כפייתי לספור בזמן שאני עושה דברים",
+    "אני מתקשה לגעת בחפץ כשאני יודע/ת שזרים נגעו בו",
+    "אני מתקשה לשלוט במחשבות שלי",
+    "אני אוסף/ת דברים שאני לא צריך/ה",
+    "אני בודק/ת שוב ושוב דלתות, חלונות, מגירות וכו'",
+    "אני מתרגז/ת אם אחרים משנים את הסדר שלי",
+    "אני מרגיש/ה צורך לחזור על מספרים מסוימים",
+    "לפעמים אני צריך/ה לשטוף את עצמי רק כי הרגשתי מזוהם/ת",
+    "מחשבות לא נעימות חודרות לראש שלי בניגוד לרצוני",
+    "אני מרגיש/ה צורך כפייתי לשמור דברים שלא אשתמש בהם",
+    "אני חוזר/ת ובודק/ת שוב ושוב שהגז/הברז/האור כבוי",
+    "אני צריך/ה שדברים יהיו מסודרים בצורה מסוימת",
+    "אני מרגיש/ה שיש מספרים טובים ורעים",
+    "אני שוטף/ת ידיים לעיתים קרובות יותר מהנדרש",
+    "יש לי מחשבות לא נעימות באופן תדיר"
+  ],
+  scoring: (answers) => {
+    const sum = Object.values(answers).reduce((a,b) => a + (parseInt(b)||0), 0);
+    const sub = (idxs, name) => ({name, score: idxs.reduce((a,i) => a + (parseInt(answers[i])||0), 0), max: idxs.length * 4});
+    let sev = "תקין", cls = "sev-normal";
+    if(sum >= 21) { sev = "חשד ל-OCD"; cls = "sev-severe"; }
+    else if(sum >= 14) { sev = "בינוני"; cls = "sev-moderate"; }
+    return {total: sum, max: 72, severity: sev, cls,
+      subdomains: [
+        sub([0,6,12], "אגירה (Hoarding)"),
+        sub([1,7,13], "בדיקה (Checking)"),
+        sub([2,8,14], "סדר (Ordering)"),
+        sub([3,9,15], "ספירה/חזרה (Counting)"),
+        sub([4,10,16], "שטיפה (Washing)"),
+        sub([5,11,17], "אובססיות (Obsessing)")
+      ]};
+  }
+};
+
+const COLUMBIA = {
+  name: "C-SSRS",
+  fullName: "סולם קולומביה לדירוג חומרת אובדנות - C-SSRS",
+  description: "השאלות הבאות עוסקות במחשבות, תכנון והתנהגויות הקשורות לרצון למות או לפגוע בעצמך. אנא ענה בכנות.",
+  // Section 1: Suicidal Ideation - each with two timeframes
+  ideationItems: [
+    {
+      num: 1,
+      text: "משאלת מוות: האם איחלת שאתה מת או שתוכל ללכת לישון ולא להתעורר?",
+      desc: "איחולי מוות כלליים"
+    },
+    {
+      num: 2,
+      text: "מחשבות אובדניות פעילות לא ספציפיות: האם חשבת בפועל על להרוג את עצמך?",
+      desc: "מחשבות כלליות על רצון למות/להרוג את עצמך, ללא מחשבות על דרכים/שיטות, ללא כוונה לפעול"
+    },
+    {
+      num: 3,
+      text: "הרהור אובדני פעיל עם שיטה כלשהי (ללא תוכנית), ללא כוונה לפעול: האם חשבת על איך תעשה זאת?",
+      desc: "מחשבות על שיטה להתאבד, אך ללא תוכנית ספציפית וללא כוונה לפעול"
+    },
+    {
+      num: 4,
+      text: "הרהור אובדני פעיל עם כוונה כלשהי לפעול, ללא תוכנית ספציפית: האם הייתה לך כוונה כלשהי לפעול לפי מחשבות אלה, בניגוד לסתם לחשוב עליהן?",
+      desc: "מחשבות אובדניות עם כוונה מסוימת לפעול, אך ללא תוכנית ספציפית"
+    },
+    {
+      num: 5,
+      text: "הרהור אובדני פעיל עם תוכנית ספציפית וכוונה: האם התחלת לעבד או עיבדת פרטים של תוכנית להרוג את עצמך? האם יש לך כוונה לבצע תוכנית זו?",
+      desc: "מחשבות אובדניות עם פרטי תוכנית מגובשים וכוונה לביצוע"
+    }
+  ],
+  // Section 2: Intensity of Ideation (for highest endorsed ideation)
+  intensityItems: [
+    {text: "תדירות: כמה פעמים היו לך מחשבות אלו?", options: [
+      {v:1, l:"פעם אחת בלבד"},
+      {v:2, l:"כמה פעמים"},
+      {v:3, l:"הרבה פעמים"},
+      {v:4, l:"רוב הזמן"},
+      {v:5, l:"כל הזמן"}
+    ]},
+    {text: "משך: כשהיו לך מחשבות אלו, כמה זמן הן נמשכו?", options: [
+      {v:1, l:"רגעים חולפים, כמה שניות או דקות"},
+      {v:2, l:"פרק זמן קצר, פחות משעה"},
+      {v:3, l:"כמה שעות"},
+      {v:4, l:"רוב היום"},
+      {v:5, l:"מעל יום אחד / נמשכות ברציפות"}
+    ]},
+    {text: "שליטה: האם יכולת/יכלת להפסיק לחשוב על להתאבד או על רצונך למות?", options: [
+      {v:0, l:"לא ניסה/תה לשלוט במחשבות"},
+      {v:1, l:"שולט/ת בקלות"},
+      {v:2, l:"יכול/ה לשלוט במעט מאמץ"},
+      {v:3, l:"שולט/ת בקושי מסוים"},
+      {v:4, l:"שולט/ת בקושי רב"},
+      {v:5, l:"לא מסוגל/ת לשלוט, מחשבות מציפות"}
+    ]},
+    {text: "גורמים מרתיעים: האם יש דברים - כמו אנשים אחרים, דת, כאב שבמוות - שמנעו ממך לרצות למות או לפעול?", options: [
+      {v:0, l:"גורמים מרתיעים לא רלוונטיים"},
+      {v:1, l:"גורמים מרתיעים בהחלט מנעו ממך"},
+      {v:2, l:"כנראה מנעו ממך"},
+      {v:3, l:"לא בטוח/ה"},
+      {v:4, l:"כנראה לא מנעו ממך"},
+      {v:5, l:"גורמים מרתיעים לא מנעו ממך כלל"}
+    ]},
+    {text: "סיבות להרהור: מהן הסיבות שחשבת על כך? האם כדי לסיים את הכאב או להפסיק את ההרגשה, או כדי לקבל תשומת לב, נקמה, או תגובה מאחרים?", options: [
+      {v:0, l:"לא רלוונטי"},
+      {v:1, l:"לחלוטין כדי לקבל תשומת לב, נקמה, או תגובה מאחרים"},
+      {v:2, l:"בעיקר כדי לקבל תשומת לב, נקמה, או תגובה מאחרים"},
+      {v:3, l:"באופן שווה כדי לקבל תשומת לב ובגלל כאב/סבל"},
+      {v:4, l:"בעיקר בגלל כאב/סבל פנימי, או כדי לסיים את הכאב"},
+      {v:5, l:"לחלוטין בגלל כאב/סבל פנימי, או כדי לסיים את הכאב"}
+    ]}
+  ],
+  // Section 3: Suicidal Behavior
+  behaviorItems: [
+    {
+      num: 1,
+      text: "ניסיון בפועל: האם ניסית להתאבד?",
+      desc: "מעשה שנועד לגרום למוות עצמי, בין אם הובטל, הופסק על ידי עצמך או אחרים, או לא הוביל לפציעה",
+      hasCount: true
+    },
+    {
+      num: 2,
+      text: "ניסיון שנקטע: האם היה מקרה שהתחלת לעשות משהו כדי לסיים את חייך, אך מישהו או משהו עצר אותך לפני שעשית?",
+      desc: "מעשה שהופסק על ידי אחרים או נסיבות חיצוניות",
+      hasCount: true
+    },
+    {
+      num: 3,
+      text: "ניסיון שנכשל (בוטל): האם היה מקרה שהתחלת לעשות משהו כדי לנסות לסיים את חייך, אך עצרת את עצמך לפני שעשית?",
+      desc: "מעשה שבוטל על ידי האדם עצמו",
+      hasCount: true
+    },
+    {
+      num: 4,
+      text: "מעשי הכנה או התנהגות מכינה: האם נקטת צעדים כלשהם לקראת ניסיון התאבדות או הכנה להתאבדות?",
+      desc: "למשל: איסוף כדורים, השגת נשק, כתיבת מכתב פרידה, חלוקת רכוש, הכנת אמצעים"
+    }
+  ],
+  // Section 4: Non-Suicidal Self-Injury
+  nssiItem: {
+    text: "פגיעה עצמית ללא כוונת אובדנות: האם התנהגת באופן של פגיעה עצמית שאינה אובדנית?",
+    desc: "למשל: חיתוך, כוויות, חבלה עצמית - ללא כוונה למות"
+  },
+  // Lethality/Medical Damage scales
+  lethalityScale: [
+    {v:0, l:"ללא נזק פיזי או נזק מינימלי ביותר (למשל: שריטות שטחיות)"},
+    {v:1, l:"נזק פיזי קל (למשל: דיבור מטושטש, כוויות מדרגה ראשונה)"},
+    {v:2, l:"נזק פיזי בינוני; נדרש טיפול רפואי (למשל: הכרה, אך מגיב)"},
+    {v:3, l:"נזק פיזי בינוני-חמור; אשפוז ומעקב רפואי (למשל: תרדמת עם רפלקסים)"},
+    {v:4, l:"נזק פיזי חמור; נדרש טיפול רפואי אינטנסיבי (למשל: תרדמת ללא רפלקסים)"},
+    {v:5, l:"מוות"}
+  ],
+  potentialLethalityScale: [
+    {v:0, l:"התנהגות שלא צפויה לגרום לפציעה"},
+    {v:1, l:"התנהגות שצפויה לגרום לפציעה אך לא למוות"},
+    {v:2, l:"התנהגות שצפויה לגרום למוות למרות הטיפול הרפואי שניתן"}
+  ],
+  timeframes: ["בזמן כלשהו בחיים", "ב-3 החודשים האחרונים"]
+};
+
+const CPSS = {
+  name: "CPSS-SR-5",
+  fullName: "סולם תסמיני PTSD לילדים ונוער - CPSS-SR-5",
+  description: "להלן רשימת בעיות שילדים ובני נוער חווים לפעמים אחרי אירוע מפחיד או מלחיץ. חשוב על מה שקרה לך ואמור כמה פעמים קרתה כל בעיה בחודש האחרון.",
+  scale: [{v:0,l:"כלל לא או רק פעם אחת"},{v:1,l:"פעם בשבוע או מעט"},{v:2,l:"כמה פעמים בשבוע"},{v:3,l:"כמעט כל יום"},{v:4,l:"כל יום או יותר"}],
+  items: [
+    "היו לך זיכרונות מטרידים, מחשבות או דימויים של מה שקרה שעלו שוב ושוב",
+    "היו לך חלומות רעים או סיוטים על מה שקרה",
+    "פעלת או הרגשת כאילו מה שקרה קורה שוב",
+    "הרגשת מצוקה, פחד או עצב כשמשהו הזכיר לך את מה שקרה",
+    "היו לך תגובות גופניות (כמו דפיקות לב, כאב ראש, כאב בטן) כשמשהו הזכיר לך",
+    "ניסית לא לחשוב על מה שקרה, לא לדבר על זה, או להדחיק רגשות קשורים",
+    "נמנעת ממקומות, אנשים או פעילויות שהזכירו לך את מה שקרה",
+    "לא יכולת לזכור חלק חשוב ממה שקרה",
+    "היו לך מחשבות שליליות על עצמך או על העולם (כמו: אני רע, העולם מסוכן)",
+    "האשמת את עצמך או אחרים במה שקרה או בתוצאותיו",
+    "היו לך רגשות שליליים חזקים כמו פחד, כעס, אשמה או בושה",
+    "איבדת עניין בפעילויות שנהגת ליהנות מהן",
+    "הרגשת מרוחק/ת או מנותק/ת מאנשים אחרים",
+    "היה לך קשה להרגיש רגשות חיוביים (כמו אושר או אהבה)",
+    "היית עצבני/ת, היו לך התפרצויות כעס, או פעלת בתוקפנות",
+    "עשית דברים מסוכנים שיכלו לפגוע בך",
+    "היית ערני/ת מאוד, על המשמר, או חשדני/ת",
+    "נבהלת בקלות, למשל כששמעת רעש חזק או כשמשהו הפתיע אותך",
+    "היה לך קשה להתרכז, למשל לקרוא, לצפות בטלוויזיה או לשחק",
+    "היו לך בעיות שינה - קשה להירדם, התעוררת באמצע הלילה, או קמת מוקדם מדי"
+  ],
+  funcItems: [
+    "תפילות או פעילויות דתיות/רוחניות",
+    "עבודות בית / חובות בבית",
+    "יחסים עם חברים",
+    "פעילויות מהנות או תחביבים",
+    "עבודת בית ספר / לימודים",
+    "יחסים עם המשפחה",
+    "אושר כללי בחיים"
+  ],
+  scoring: (answers) => {
+    const symptomAnswers = {};
+    const funcAnswers = {};
+    Object.entries(answers).forEach(([k,v]) => {
+      if(k.startsWith("f_")) funcAnswers[k] = v;
+      else symptomAnswers[k] = v;
+    });
+    const sum = Object.values(symptomAnswers).reduce((a,b) => a + (parseInt(b)||0), 0);
+    const funcSum = Object.values(funcAnswers).filter(v => v === "1").length;
+    const sub = (idxs, name) => ({name, score: idxs.reduce((a,i) => a + (parseInt(symptomAnswers[i])||0), 0), max: idxs.length * 4});
+    let sev = "תקין", cls = "sev-normal";
+    if(sum >= 31) { sev = "חשד ל-PTSD"; cls = "sev-severe"; }
+    else if(sum >= 21) { sev = "מומלץ טיפול ממוקד טראומה"; cls = "sev-moderate"; }
+    else if(sum >= 11) { sev = "תסמינים קלים-בינוניים"; cls = "sev-mild"; }
+    return {total: sum, max: 80, severity: sev, cls,
+      subdomains: [
+        sub([0,1,2,3,4], "חודרנות (B)"),
+        sub([5,6], "הימנעות (C)"),
+        sub([7,8,9,10,11,12,13], "קוגניציה שלילית ומצב רוח (D)"),
+        sub([14,15,16,17,18,19], "עוררות ותגובתיות (E)"),
+        {name: "פגיעה תפקודית", score: funcSum, max: 7}
+      ]};
+  }
+};
+
+const DES = {
+  name: "DES",
+  fullName: "סולם חוויות דיסוציאטיביות - DES-II",
+  description: "שאלון זה מכיל 28 שאלות על חוויות שאנשים חווים בחיי היומיום. סמן את אחוז הזמן שבו קורה לך כל דבר.",
+  items: [
+    "יש אנשים שנוהגים ברכב או באוטובוס ופתאום מבינים שהם לא זוכרים מה קרה במהלך כל הנסיעה או חלקה",
+    "יש אנשים שמוצאים עצמם מקשיבים למישהו מדבר ופתאום מבינים שלא שמעו חלק ממה שנאמר או את כולו",
+    "יש אנשים שמוצאים עצמם במקום מסוים ואין להם מושג איך הגיעו לשם",
+    "יש אנשים שמגלים שהם לובשים בגדים שהם לא זוכרים שלבשו",
+    "יש אנשים שמספרים להם שהם עושים או אומרים דברים שהם לא זוכרים שעשו או אמרו",
+    "יש אנשים שמגלים בין חפציהם דברים שהם לא זוכרים שקנו",
+    "יש אנשים שלפעמים מרגישים כאילו הם עומדים ליד עצמם וצופים בעצמם עושים משהו, כאילו הם מביטים באדם אחר",
+    "יש אנשים שמספרים להם שלפעמים הם לא מזהים חברים או בני משפחה",
+    "יש אנשים שמגלים שאין להם זיכרון לאירועים חשובים בחייהם (למשל חתונה, סיום תיכון)",
+    "יש אנשים שחווים שאנשים אחרים, חפצים והעולם סביבם אינם אמיתיים",
+    "יש אנשים שמביטים במראה ולא מזהים את עצמם",
+    "יש אנשים שחווים שאנשים, חפצים ודברים סביבם אינם אמיתיים",
+    "יש אנשים שמרגישים שהגוף שלהם לא מרגיש שייך להם",
+    "יש אנשים שלפעמים זוכרים אירוע מהעבר בצורה כה חיה שמרגישים כאילו הוא חי וקורה שוב",
+    "יש אנשים שלפעמים לא בטוחים אם דברים שהם זוכרים באמת קרו או שהם רק חלמו אותם",
+    "יש אנשים שנמצאים במקום מוכר אבל מוצאים אותו מוזר ולא מוכר",
+    "יש אנשים שכשהם צופים בטלוויזיה או בסרט הם נשאבים כל כך לסיפור שהם לא מודעים לדברים אחרים שקורים סביבם",
+    "יש אנשים שנשאבים כל כך לדמיון או חלום בהקיץ שמרגישים כאילו זה באמת קורה להם",
+    "יש אנשים שלפעמים מסוגלים להתעלם מכאב",
+    "יש אנשים שלפעמים יושבים ומביטים לחלל ולא חושבים על כלום ולא מודעים לחלוף הזמן",
+    "יש אנשים שלפעמים כשהם לבד הם מדברים בקול עם עצמם",
+    "יש אנשים שמגלים שבמצב אחד הם פועלים בצורה כה שונה בהשוואה למצב אחר שהם מרגישים כאילו הם שני אנשים שונים",
+    "יש אנשים שמגלים שבמצבים מסוימים הם מסוגלים לעשות דברים בקלות ובספונטניות מפתיעות שבדרך כלל יהיו קשים להם",
+    "יש אנשים שלא יכולים לזכור אם הם עשו משהו או רק חשבו לעשות אותו",
+    "יש אנשים שמגלים ראיות שעשו דברים שהם לא זוכרים שעשו",
+    "יש אנשים שמוצאים כתבים, ציורים או רשימות בין חפציהם שהם בוודאות עשו אבל לא זוכרים שעשו",
+    "יש אנשים ששומעים קולות בראשם שאומרים להם לעשות דברים או מגיבים על מה שהם עושים",
+    "יש אנשים שלפעמים מרגישים כאילו הם מביטים בעולם דרך ערפל כך שאנשים וחפצים נראים רחוקים או לא ברורים"
+  ],
+  scoring: (answers) => {
+    const vals = Object.values(answers).map(v => parseInt(v)||0);
+    const avg = vals.length > 0 ? vals.reduce((a,b)=>a+b,0) / 28 : 0;
+    const sub = (idxs, name) => {
+      const s = idxs.map(i => parseInt(answers[i])||0);
+      return {name, score: Math.round(s.reduce((a,b)=>a+b,0)/s.length), max: 100};
+    };
+    let sev = "תקין", cls = "sev-normal";
+    if(avg >= 30) { sev = "דיסוציאציה קלינית משמעותית"; cls = "sev-severe"; }
+    else if(avg >= 20) { sev = "דיסוציאציה בינונית"; cls = "sev-moderate"; }
+    else if(avg >= 10) { sev = "דיסוציאציה קלה"; cls = "sev-mild"; }
+    return {total: Math.round(avg*10)/10, max: 100, severity: sev, cls,
+      subdomains: [
+        sub([2,3,4,7,24,25], "שיכחון (Amnesia)"),
+        sub([6,10,11,12,26,27], "דה-פרסונליזציה (Depersonalization)"),
+        sub([1,13,14,16,17,19], "ספיגה (Absorption)")
+      ]};
+  }
+};
+
+const LEC5 = {
+  name: "LEC-5",
+  fullName: "רשימת אירועי חיים - LEC-5 (Life Events Checklist)",
+  description: "להלן רשימת אירועים קשים או מלחיצים שקורים לפעמים לאנשים. עבור כל אירוע, סמן אחת או יותר מהעמודות שמתארות את חוויתך עם אירוע זה.",
+  responseOptions: ["קרה לי", "הייתי עד/ה", "נודע לי", "חלק מהעבודה", "לא בטוח/ה", "לא רלוונטי"],
+  items: [
+    "אסון טבע (למשל: שיטפון, הוריקן, טורנדו, רעידת אדמה)",
+    "שריפה או פיצוץ",
+    "תאונת תחבורה (למשל: תאונת דרכים, תאונת סירה, התרסקות רכבת, התרסקות מטוס)",
+    "תאונה חמורה בעבודה, בבית או במהלך פעילות פנאי",
+    "חשיפה לחומר רעיל (למשל: כימיקלים מסוכנים, קרינה)",
+    "תקיפה פיזית (למשל: הותקפת, שדדו אותך, ירו בך, דקרו אותך, אוים בנשק)",
+    "תקיפה באמצעי נשק (למשל: ירו בך, דקרו אותך, איימו בנשק, בפצצה, ברימון)",
+    "תקיפה מינית (למשל: אונס, ניסיון אונס, מעשים מגונים בכפייה, בכוח או באיום)",
+    "חוויה מינית לא נעימה אחרת",
+    "לחימה או חשיפה לאזור מלחמה (בצבא או כאזרח)",
+    "שבי (למשל: חטיפה, שבי מלחמה, כליאה)",
+    "מחלה או פציעה מסכנת חיים",
+    "סבל אנושי חמור",
+    "מוות פתאומי ובלתי צפוי של אדם קרוב",
+    "מוות פתאומי ואלים (למשל: רצח, התאבדות) של אדם קרוב",
+    "פציעה חמורה, נזק, או מוות שגרמת לאדם אחר",
+    "כל אירוע מלחיץ מאוד אחר"
+  ],
+  criterionA: {
+    text: "אם ענית על אחד או יותר מהפריטים לעיל, התייחס/י לאירוע שהכי מטריד אותך כרגע:",
+    fields: [
+      "תאר/י בקצרה את האירוע הכי מטריד (למשל: מה קרה, מי היה מעורב, וכו')",
+      "מתי קרה האירוע? (גיל או תאריך)",
+      "כמה פעמים קרה לך?"
+    ],
+    yesNoQuestions: [
+      "האם האירוע כלל מוות ממשי או איום של מוות?",
+      "האם האירוע כלל פציעה חמורה ממשית או איום של פציעה חמורה?",
+      "האם האירוע כלל אלימות מינית ממשית או איום של אלימות מינית?"
+    ]
+  }
+};
+
+const MHCSF = {
+  name: "MHC-SF",
+  fullName: "שאלון רצף הבריאות הנפשית - MHC-SF",
+  description: "בחודש האחרון, באיזו תדירות הרגשת... סמן/י את התשובה שמתארת בצורה הטובה ביותר את חווייתך.",
+  scale: [
+    {v:0, l:"בכלל לא"},
+    {v:1, l:"פעם או פעמיים בכל החודש"},
+    {v:2, l:"כפעם בשבוע"},
+    {v:3, l:"פעמיים-שלוש בשבוע"},
+    {v:4, l:"כמעט כל יום"},
+    {v:5, l:"כל יום"}
+  ],
+  items: [
+    "הרגשת מאושר/ת",
+    "הרגשת מעוניין/ת בחיים",
+    "הרגשת סיפוק מהחיים",
+    "הרגשת שיש לך תרומה חשובה לחברה",
+    "הרגשת שייכות לקהילה (קבוצה חברתית, שכונה, עיר)",
+    "הרגשת שהחברה שלנו הולכת ומשתפרת עבור אנשים כמוך",
+    "הרגשת שאנשים הם בעצם טובים",
+    "הרגשת שהדרך שבה החברה פועלת הגיונית בעיניך",
+    "הרגשת שאתה אוהב/ת את רוב הצדדים באישיות שלך",
+    "הרגשת שאתה מנהל/ת היטב את האחריות של חיי היום-יום",
+    "הרגשת שיש לך יחסים חמים ומבוססי אמון עם אחרים",
+    "הרגשת שיש לך חוויות שמאתגרות אותך לגדול ולהיות אדם טוב יותר",
+    "הרגשת בטחון לחשוב ולהביע דעות משלך",
+    "הרגשת שהחיים שלך מכוונים ויש להם משמעות"
+  ],
+  scoring: (answers) => {
+    const vals = Object.values(answers).map(v => parseInt(v) || 0);
+    const sum = vals.reduce((a, b) => a + b, 0);
+    const sub = (idxs, name) => {
+      const s = idxs.reduce((a, i) => a + (parseInt(answers[i]) || 0), 0);
+      return {name, score: s, max: idxs.length * 5};
+    };
+    const emotionalHigh = [0,1,2].filter(i => parseInt(answers[i]) >= 4).length;
+    const socPsychHigh = [3,4,5,6,7,8,9,10,11,12,13].filter(i => parseInt(answers[i]) >= 4).length;
+    let sev, cls;
+    if (emotionalHigh >= 1 && socPsychHigh >= 6) {
+      sev = "פורח/ת (Flourishing)"; cls = "sev-normal";
+    } else {
+      const emotionalLow = [0,1,2].filter(i => parseInt(answers[i]) <= 1).length;
+      const socPsychLow = [3,4,5,6,7,8,9,10,11,12,13].filter(i => parseInt(answers[i]) <= 1).length;
+      if (emotionalLow >= 1 && socPsychLow >= 6) {
+        sev = "שוחק/ת (Languishing)"; cls = "sev-severe";
+      } else {
+        sev = "בריאות נפשית מתונה (Moderate)"; cls = "sev-moderate";
+      }
+    }
+    return {
+      total: sum, max: 70, severity: sev, cls,
+      subdomains: [
+        sub([0,1,2], "רווחה רגשית (Emotional)"),
+        sub([3,4,5,6,7], "רווחה חברתית (Social)"),
+        sub([8,9,10,11,12,13], "רווחה פסיכולוגית (Psychological)")
+      ]
+    };
+  }
+};
+
+const SHS = {
+  name: "SHS",
+  fullName: "סולם האושר הסובייקטיבי - SHS",
+  description: "לכל אחת מהשאלות הבאות, סמן/י את הנקודה על הסולם (1-7) שלדעתך מתארת אותך בצורה המדויקת ביותר.",
+  items: [
+    "באופן כללי, אני חושב/ת על עצמי כאדם:",
+    "בהשוואה לרוב האנשים סביבי, אני חושב/ת על עצמי כאדם:",
+    "אנשים מסוימים הם בדרך כלל מאוד מאושרים. הם נהנים מהחיים ללא קשר למה שקורה, ומפיקים את המרב מכל דבר. עד כמה תיאור זה מאפיין אותך?",
+    "אנשים מסוימים הם בדרך כלל לא מאוד מאושרים. למרות שהם לא מדוכאים, נראה שהם אף פעם לא מאושרים כמו שהם יכולים להיות. עד כמה תיאור זה מאפיין אותך?"
+  ],
+  itemScaleLabels: [
+    {low: "לא מאושר/ת כלל", high: "מאושר/ת מאוד"},
+    {low: "פחות מאושר/ת", high: "יותר מאושר/ת"},
+    {low: "כלל לא", high: "במידה רבה מאוד"},
+    {low: "במידה רבה מאוד", high: "כלל לא"}
+  ],
+  reverseItems: [3],
+  scoring: (answers) => {
+    let sum = 0;
+    let count = 0;
+    for (let i = 0; i < 4; i++) {
+      const val = parseInt(answers[i]);
+      if (!isNaN(val)) {
+        sum += (i === 3) ? (8 - val) : val;
+        count++;
+      }
+    }
+    const avg = count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+    let sev = "תקין", cls = "sev-normal";
+    if (avg <= 3) { sev = "אושר נמוך"; cls = "sev-severe"; }
+    else if (avg <= 4.5) { sev = "אושר מתחת לממוצע"; cls = "sev-moderate"; }
+    else if (avg <= 5.5) { sev = "אושר ממוצע"; cls = "sev-mild"; }
+    else { sev = "אושר גבוה"; cls = "sev-normal"; }
+    return {total: avg, max: 7, severity: sev, cls, subdomains: []};
+  }
+};
+
+const QUESTIONNAIRES = [BDI2, PHQ9, GAD7, DASS21, PCL5, OCIR, COLUMBIA, CPSS, DES, LEC5, MHCSF, SHS];
+
+// ==================== QUESTIONNAIRE DOMAINS ====================
+const QUESTIONNAIRE_DOMAINS = [
+  {
+    name: "דיכאון ומצב רוח",
+    questionnaires: ["BDI-II", "PHQ-9"],
+    color: "#3b82f6"
+  },
+  {
+    name: "חרדה",
+    questionnaires: ["GAD-7"],
+    color: "#f59e0b"
+  },
+  {
+    name: "דיכאון, חרדה ולחץ",
+    questionnaires: ["DASS-21"],
+    color: "#8b5cf6"
+  },
+  {
+    name: "טראומה ו-PTSD",
+    questionnaires: ["PCL-5", "CPSS-5", "LEC-5"],
+    color: "#ef4444"
+  },
+  {
+    name: "OCD",
+    questionnaires: ["OCI-R"],
+    color: "#10b981"
+  },
+  {
+    name: "דיסוציאציה",
+    questionnaires: ["DES"],
+    color: "#6366f1"
+  },
+  {
+    name: "סיכון אובדני",
+    questionnaires: ["C-SSRS"],
+    color: "#dc2626"
+  },
+  {
+    name: "רווחה נפשית וחוסן",
+    questionnaires: ["MHC-SF", "SHS"],
+    color: "#059669"
+  }
+];
+
+// ==================== F-CODES DATA ====================
+const F_CODES_DATA = [
+  {
+    category: "F30-F39: הפרעות מצב רוח",
+    items: [
+      {code:"F32.0",label:"אפיזודה דיכאונית קלה - Mild depressive episode"},
+      {code:"F32.1",label:"אפיזודה דיכאונית בינונית - Moderate depressive episode"},
+      {code:"F32.2",label:"אפיזודה דיכאונית חמורה ללא פסיכוזה - Severe depressive episode w/o psychotic symptoms"},
+      {code:"F32.3",label:"אפיזודה דיכאונית חמורה עם פסיכוזה - Severe depressive episode with psychotic symptoms"},
+      {code:"F32.9",label:"אפיזודה דיכאונית, לא מסווגת - Depressive episode, unspecified"},
+      {code:"F33.0",label:"הפרעה דיכאונית חוזרת, אפיזודה קלה - Recurrent depressive disorder, mild"},
+      {code:"F33.1",label:"הפרעה דיכאונית חוזרת, אפיזודה בינונית - Recurrent depressive disorder, moderate"},
+      {code:"F33.2",label:"הפרעה דיכאונית חוזרת, חמורה ללא פסיכוזה - Recurrent depressive disorder, severe w/o psychotic"},
+      {code:"F33.3",label:"הפרעה דיכאונית חוזרת, חמורה עם פסיכוזה - Recurrent depressive disorder, severe with psychotic"},
+      {code:"F33.9",label:"הפרעה דיכאונית חוזרת, לא מסווגת - Recurrent depressive disorder, unspecified"},
+      {code:"F34.1",label:"דיסתימיה - Dysthymia"},
+      {code:"F31.0",label:"הפרעה דו-קוטבית, אפיזודה היפומנית - Bipolar, hypomanic episode"},
+      {code:"F31.1",label:"הפרעה דו-קוטבית, אפיזודה מנית ללא פסיכוזה - Bipolar, manic w/o psychotic"},
+      {code:"F31.3",label:"הפרעה דו-קוטבית, אפיזודה דיכאונית קלה-בינונית - Bipolar, mild/moderate depression"},
+      {code:"F31.4",label:"הפרעה דו-קוטבית, דיכאון חמור ללא פסיכוזה - Bipolar, severe depression w/o psychotic"},
+      {code:"F31.9",label:"הפרעה דו-קוטבית, לא מסווגת - Bipolar, unspecified"},
+      {code:"F39",label:"הפרעת מצב רוח, לא מסווגת - Mood disorder, unspecified"}
+    ]
+  },
+  {
+    category: "F40-F48: הפרעות חרדה, דחק וסומטופורם",
+    items: [
+      {code:"F40.0",label:"אגורפוביה - Agoraphobia"},
+      {code:"F40.1",label:"פוביה חברתית - Social phobia"},
+      {code:"F40.2",label:"פוביה ספציפית - Specific phobia"},
+      {code:"F41.0",label:"הפרעת פניקה - Panic disorder"},
+      {code:"F41.1",label:"הפרעת חרדה מוכללת (GAD) - Generalized anxiety disorder"},
+      {code:"F41.2",label:"הפרעה מעורבת של חרדה ודיכאון - Mixed anxiety and depressive disorder"},
+      {code:"F41.9",label:"הפרעת חרדה, לא מסווגת - Anxiety disorder, unspecified"},
+      {code:"F42.0",label:"מחשבות אובססיביות בעיקר - Predominantly obsessional thoughts"},
+      {code:"F42.1",label:"מעשים כפייתיים בעיקר - Predominantly compulsive acts"},
+      {code:"F42.2",label:"OCD מעורב - Mixed obsessional thoughts and acts"},
+      {code:"F42.9",label:"OCD, לא מסווג - OCD, unspecified"},
+      {code:"F43.0",label:"תגובת דחק חריפה - Acute stress reaction"},
+      {code:"F43.1",label:"הפרעת דחק פוסט-טראומטית (PTSD) - Post-traumatic stress disorder"},
+      {code:"F43.2",label:"הפרעת הסתגלות - Adjustment disorder"},
+      {code:"F43.9",label:"תגובה לדחק חמור, לא מסווגת - Reaction to severe stress, unspecified"},
+      {code:"F44.0",label:"אמנזיה דיסוציאטיבית - Dissociative amnesia"},
+      {code:"F44.1",label:"נדודים דיסוציאטיביים - Dissociative fugue"},
+      {code:"F44.7",label:"הפרעות דיסוציאטיביות מעורבות - Mixed dissociative disorders"},
+      {code:"F44.81",label:"הפרעה דיסוציאטיבית מרובת אישיות - Dissociative identity disorder"},
+      {code:"F44.9",label:"הפרעה דיסוציאטיבית, לא מסווגת - Dissociative disorder, unspecified"},
+      {code:"F45.0",label:"הפרעת סומטיזציה - Somatization disorder"},
+      {code:"F48.1",label:"ניתוק-דה-ריאליזציה - Depersonalization-derealization syndrome"}
+    ]
+  },
+  {
+    category: "F60-F69: הפרעות אישיות והתנהגות",
+    items: [
+      {code:"F60.0",label:"הפרעת אישיות פרנואידית - Paranoid personality disorder"},
+      {code:"F60.1",label:"הפרעת אישיות שיזואידית - Schizoid personality disorder"},
+      {code:"F60.2",label:"הפרעת אישיות אנטי-חברתית - Dissocial personality disorder"},
+      {code:"F60.3",label:"הפרעת אישיות גבולית - Borderline personality disorder"},
+      {code:"F60.4",label:"הפרעת אישיות היסטריונית - Histrionic personality disorder"},
+      {code:"F60.5",label:"הפרעת אישיות אובססיבית - Anankastic personality disorder"},
+      {code:"F60.6",label:"הפרעת אישיות נמנעת - Avoidant personality disorder"},
+      {code:"F60.7",label:"הפרעת אישיות תלויה - Dependent personality disorder"},
+      {code:"F60.9",label:"הפרעת אישיות, לא מסווגת - Personality disorder, unspecified"},
+      {code:"F62.0",label:"שינוי אישיות אחרי חוויה קטסטרופלית - Personality change after catastrophic experience"}
+    ]
+  },
+  {
+    category: "F20-F29: סכיזופרניה והפרעות פסיכוטיות",
+    items: [
+      {code:"F20.0",label:"סכיזופרניה פרנואידית - Paranoid schizophrenia"},
+      {code:"F20.9",label:"סכיזופרניה, לא מסווגת - Schizophrenia, unspecified"},
+      {code:"F22.0",label:"הפרעה דלוזיונלית - Delusional disorder"},
+      {code:"F23.9",label:"הפרעה פסיכוטית חריפה, לא מסווגת - Acute psychotic disorder, unspecified"},
+      {code:"F25.9",label:"הפרעה סכיזואפקטיבית, לא מסווגת - Schizoaffective disorder, unspecified"}
+    ]
+  },
+  {
+    category: "F10-F19: הפרעות שימוש בחומרים",
+    items: [
+      {code:"F10.1",label:"שימוש מזיק באלכוהול - Harmful use of alcohol"},
+      {code:"F10.2",label:"תלות באלכוהול - Alcohol dependence"},
+      {code:"F11.1",label:"שימוש מזיק באופיאטים - Harmful use of opioids"},
+      {code:"F12.1",label:"שימוש מזיק בקנאביס - Harmful use of cannabinoids"},
+      {code:"F19.1",label:"שימוש מזיק בחומרים מרובים - Harmful use of multiple drugs"}
+    ]
+  },
+  {
+    category: "F50-F59: הפרעות אכילה ותסמונות התנהגותיות",
+    items: [
+      {code:"F50.0",label:"אנורקסיה נרבוזה - Anorexia nervosa"},
+      {code:"F50.2",label:"בולימיה נרבוזה - Bulimia nervosa"},
+      {code:"F50.8",label:"הפרעות אכילה אחרות - Other eating disorders"},
+      {code:"F51.0",label:"אינסומניה לא אורגנית - Nonorganic insomnia"},
+      {code:"F51.5",label:"סיוטים - Nightmares"}
+    ]
+  },
+  {
+    category: "F90-F98: הפרעות ילדות והתבגרות",
+    items: [
+      {code:"F90.0",label:"הפרעת קשב וריכוז (ADHD) - Disturbance of activity and attention"},
+      {code:"F91.3",label:"הפרעת התנגדות - Oppositional defiant disorder"},
+      {code:"F93.0",label:"חרדת הפרדה - Separation anxiety disorder"},
+      {code:"F93.1",label:"חרדה פובית בילדות - Phobic anxiety disorder of childhood"},
+      {code:"F94.1",label:"הפרעת התקשרות תגובתית - Reactive attachment disorder"}
+    ]
+  }
+];
+
+// ==================== QUESTIONNAIRE TO F-CODE MAPPING ====================
+const QUEST_TO_FCODE = {
+  "BDI-II": {
+    "מינימלי": null,
+    "קל": {code:"F32.0", label:"אפיזודה דיכאונית קלה", source:"BDI-II"},
+    "בינוני": {code:"F32.1", label:"אפיזודה דיכאונית בינונית", source:"BDI-II"},
+    "חמור": {code:"F32.2", label:"אפיזודה דיכאונית חמורה ללא פסיכוזה", source:"BDI-II"}
+  },
+  "PHQ-9": {
+    "מינימלי": null,
+    "קל": {code:"F32.0", label:"אפיזודה דיכאונית קלה", source:"PHQ-9"},
+    "בינוני": {code:"F32.1", label:"אפיזודה דיכאונית בינונית", source:"PHQ-9"},
+    "בינוני-חמור": {code:"F32.2", label:"אפיזודה דיכאונית חמורה ללא פסיכוזה", source:"PHQ-9"},
+    "חמור": {code:"F32.2", label:"אפיזודה דיכאונית חמורה ללא פסיכוזה", source:"PHQ-9"}
+  },
+  "GAD-7": {
+    "מינימלי": null,
+    "קל": {code:"F41.1", label:"הפרעת חרדה מוכללת (GAD)", source:"GAD-7"},
+    "בינוני": {code:"F41.1", label:"הפרעת חרדה מוכללת (GAD)", source:"GAD-7"},
+    "חמור": {code:"F41.1", label:"הפרעת חרדה מוכללת (GAD)", source:"GAD-7"}
+  },
+  "PCL-5": {
+    "תקין": null,
+    "תסמינים בינוניים": {code:"F43.1", label:"חשד ל-PTSD - הפרעת דחק פוסט-טראומטית", source:"PCL-5"},
+    "חשד ל-PTSD": {code:"F43.1", label:"הפרעת דחק פוסט-טראומטית (PTSD)", source:"PCL-5"},
+    "סביר PTSD": {code:"F43.1", label:"הפרעת דחק פוסט-טראומטית (PTSD)", source:"PCL-5"}
+  },
+  "OCI-R": {
+    "תקין": null,
+    "בינוני": {code:"F42.2", label:"OCD מעורב - מחשבות ומעשים אובססיביים", source:"OCI-R"},
+    "חשד ל-OCD": {code:"F42.2", label:"OCD מעורב - מחשבות ומעשים אובססיביים", source:"OCI-R"}
+  },
+  "CPSS-5": {
+    "תקין": null,
+    "תסמינים קלים-בינוניים": {code:"F43.1", label:"חשד ל-PTSD בילדים/נוער", source:"CPSS-5"},
+    "מומלץ טיפול ממוקד טראומה": {code:"F43.1", label:"PTSD - הפרעת דחק פוסט-טראומטית", source:"CPSS-5"},
+    "חשד ל-PTSD": {code:"F43.1", label:"PTSD - הפרעת דחק פוסט-טראומטית", source:"CPSS-5"}
+  },
+  "DES": {
+    "תקין": null,
+    "בינוני": {code:"F44.9", label:"הפרעה דיסוציאטיבית, לא מסווגת", source:"DES"},
+    "חשד להפרעה דיסוציאטיבית": {code:"F44.9", label:"הפרעה דיסוציאטיבית, לא מסווגת", source:"DES"},
+    "רמה גבוהה": {code:"F44.9", label:"הפרעה דיסוציאטיבית, לא מסווגת", source:"DES"}
+  }
+};
+
+// DASS-21 needs special handling (multiple subscales)
+const DASS21_FCODE_MAP = {
+  depression: {
+    "תקין": null,
+    "קל": {code:"F32.0", label:"אפיזודה דיכאונית קלה", source:"DASS-21 דיכאון"},
+    "בינוני": {code:"F32.1", label:"אפיזודה דיכאונית בינונית", source:"DASS-21 דיכאון"},
+    "חמור": {code:"F32.2", label:"אפיזודה דיכאונית חמורה", source:"DASS-21 דיכאון"},
+    "חמור מאוד": {code:"F32.2", label:"אפיזודה דיכאונית חמורה", source:"DASS-21 דיכאון"}
+  },
+  anxiety: {
+    "תקין": null,
+    "קל": {code:"F41.1", label:"הפרעת חרדה מוכללת", source:"DASS-21 חרדה"},
+    "בינוני": {code:"F41.1", label:"הפרעת חרדה מוכללת", source:"DASS-21 חרדה"},
+    "חמור": {code:"F41.1", label:"הפרעת חרדה מוכללת", source:"DASS-21 חרדה"},
+    "חמור מאוד": {code:"F41.1", label:"הפרעת חרדה מוכללת", source:"DASS-21 חרדה"}
+  },
+  stress: {
+    "תקין": null,
+    "קל": {code:"F43.9", label:"תגובת דחק, לא מסווגת", source:"DASS-21 לחץ"},
+    "בינוני": {code:"F43.9", label:"תגובת דחק, לא מסווגת", source:"DASS-21 לחץ"},
+    "חמור": {code:"F43.9", label:"תגובת דחק, לא מסווגת", source:"DASS-21 לחץ"},
+    "חמור מאוד": {code:"F43.9", label:"תגובת דחק, לא מסווגת", source:"DASS-21 לחץ"}
+  }
+};
+
+function getSuggestedDiagnoses(results) {
+  const suggestions = [];
+  const seen = new Set();
+  Object.entries(results).forEach(([qName, data]) => {
+    if (!data.results) return;
+    if (qName === 'DASS-21' && data.results.subdomains) {
+      data.results.subdomains.forEach(sub => {
+        const subKey = sub.name.includes('Depression') || sub.name.includes('דיכאון') ? 'depression'
+          : sub.name.includes('Anxiety') || sub.name.includes('חרדה') ? 'anxiety'
+          : sub.name.includes('Stress') || sub.name.includes('לחץ') ? 'stress' : null;
+        if (subKey && sub.severity && DASS21_FCODE_MAP[subKey] && DASS21_FCODE_MAP[subKey][sub.severity]) {
+          const fc = DASS21_FCODE_MAP[subKey][sub.severity];
+          if (fc && !seen.has(fc.code)) { seen.add(fc.code); suggestions.push({...fc}); }
+        }
+      });
+      return;
+    }
+    const mapping = QUEST_TO_FCODE[qName];
+    if (!mapping) return;
+    const severity = data.results.severity;
+    if (severity && mapping[severity]) {
+      const fc = mapping[severity];
+      if (!seen.has(fc.code)) { seen.add(fc.code); suggestions.push({...fc}); }
+    }
+  });
+  return suggestions;
+}
+
+
+// ==================== COMPONENTS ====================
+
+function StandardQuestion({item, idx, qnum, selectedValue, onAnswer, scale, isSkipped}) {
+  const isAnswered = selectedValue !== null && selectedValue !== undefined && selectedValue !== '';
+  return (
+    <div className={`q-item ${isAnswered ? 'answered' : ''} ${isSkipped && !isAnswered ? 'skipped' : ''}`}>
+      <div className="q-text">{item}<span className="q-num">{qnum+1}</span></div>
+      <div className="q-options">
+        {scale.map((opt, oi) => (
+          <button key={oi} className={`q-opt ${selectedValue == opt.v ? 'selected' : ''}`}
+            onClick={() => onAnswer(idx, selectedValue == opt.v ? null : opt.v)}>
+            {opt.l}
+          </button>
+        ))}
+        {isAnswered && (
+          <button className="deselect-btn" onClick={() => onAnswer(idx, null)}>ביטול</button>
+        )}
+      </div>
+      {isSkipped && !isAnswered && <div className="skipped-label">לא סומנה תשובה</div>}
+    </div>
+  );
+}
+
+function BDI2Question({item, idx, selectedValue, onAnswer, isSkipped}) {
+  const isAnswered = selectedValue !== null && selectedValue !== undefined && selectedValue !== '';
+  return (
+    <div className={`bdi-item ${isAnswered ? 'answered' : ''} ${isSkipped && !isAnswered ? 'skipped' : ''}`}>
+      <div className="q-text">{item.q}<span className="q-num">{idx+1}</span></div>
+      <div className="bdi-options">
+        {item.opts.map((opt, oi) => (
+          <button key={oi} className={`bdi-opt ${selectedValue == opt.v ? 'selected' : ''}`}
+            onClick={() => onAnswer(idx, selectedValue == opt.v ? null : opt.v)}>
+            {opt.l}
+          </button>
+        ))}
+        {isAnswered && (
+          <button className="deselect-btn" style={{marginTop:'4px'}} onClick={() => onAnswer(idx, null)}>ביטול בחירה</button>
+        )}
+      </div>
+      {isSkipped && !isAnswered && <div className="skipped-label">לא סומנה תשובה</div>}
+    </div>
+  );
+}
+
+function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onClear}) {
+  const ansCount = Object.values(answers).filter(v => v !== null && v !== undefined && v !== '').length;
+  const allAnswered = ansCount === q.items.length;
+  const scoringResult = allAnswered && q.scoring ? q.scoring(answers) : null;
+  const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+  return (
+    <div className="section">
+      <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+      </div>
+      <h3 className="section-title">{q.fullName}</h3>
+      <div style={{marginBottom:'20px'}}>{q.description}</div>
+      {q.hasCriterionA && (
+        <div className="section" style={{marginBottom:'20px',background:'#f8fafc',padding:'16px',borderRadius:'10px'}}>
+          <h4 style={{color:'#1e3a5f',marginBottom:'8px',fontSize:'.95em'}}>קריטריון A - תיאור האירוע הטראומטי</h4>
+          <textarea className="crit-a-text" placeholder="תאר/י בקצרה את האירוע הטראומטי..." 
+            value={answers['criterionA'] || ''} 
+            onChange={(e) => onAnswer('criterionA', e.target.value)} />
+          <div className="crit-a-options" style={{marginTop:'10px'}}>
+            <span style={{fontWeight:'600',color:'#475569',fontSize:'.85em',marginLeft:'8px'}}>סוג חשיפה:</span>
+            {["חוויה ישירה","עדות לאירוע","נודע על אירוע לקרוב","חשיפה חוזרת לפרטים"].map((opt, i) => (
+              <button key={i} className={`q-opt ${answers['criterionAType'] === opt ? 'selected' : ''}`}
+                onClick={() => onAnswer('criterionAType', answers['criterionAType'] === opt ? null : opt)}
+                style={{fontSize:'.8em'}}>{opt}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="progress-text">
+        <span>ענו: {ansCount} / {q.items.length}</span>
+        <span>{Math.round(ansCount/q.items.length*100)}%</span>
+      </div>
+      <div className="progress-wrap">
+        <div className="progress-fill high" style={{width: (ansCount/q.items.length*100) + '%'}}></div>
+      </div>
+      <div style={{marginTop:'20px'}}>
+        {q.items.map((item, idx) => (
+          <StandardQuestion key={idx} item={item} idx={idx} qnum={idx}
+            selectedValue={answers[idx]} onAnswer={onAnswer} scale={q.scale}
+            isSkipped={idx < maxAnsweredIdx && (answers[idx] === null || answers[idx] === undefined || answers[idx] === '')} />
+        ))}
+      </div>
+      {allAnswered && scoringResult && (
+        <div className="export-section">
+          <h3>תוצאות השאלון</h3>
+          <div className="result-summary">
+            <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+            <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+            {scoringResult.subdomains && scoringResult.subdomains.length > 1 && (
+              <div className="subdomain" style={{marginTop:'16px',textAlign:'right'}}>
+                {scoringResult.subdomains.map((sub, si) => (
+                  <div key={si} className="subdomain-row">
+                    <span className="subdomain-label">{sub.name}</span>
+                    <div className="bar-bg"><div className="bar-fill high" style={{width:(sub.score/sub.max*100)+'%',background:'#3b82f6'}}></div></div>
+                    <span className="subdomain-val">{sub.score}/{sub.max}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <button className="export-btn" onClick={() => exportQuestionnaire(q.name, answers, scoringResult)}>הורד תוצאות (טקסט)</button>
+          <button className="export-btn" onClick={() => exportQuestionnaireExcel(q, answers, scoringResult)}>ייצוא לאקסל</button>
+          <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(q.name, q.fullName, scoringResult, {...answers})}>הוסף לתוצאות</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+  const ansCount = Object.values(answers).filter(v => v !== null && v !== undefined && v !== '').length;
+  const allAnswered = ansCount === BDI2.items.length;
+  const scoringResult = allAnswered ? BDI2.scoring(answers) : null;
+  const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+  return (
+    <div className="section">
+      <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+      </div>
+      <h3 className="section-title">{BDI2.fullName}</h3>
+      <div style={{marginBottom:'20px'}}>{BDI2.description}</div>
+      <div className="progress-text">
+        <span>ענו: {ansCount} / {BDI2.items.length}</span>
+        <span>{Math.round(ansCount/BDI2.items.length*100)}%</span>
+      </div>
+      <div className="progress-wrap">
+        <div className="progress-fill high" style={{width: (ansCount/BDI2.items.length*100) + '%'}}></div>
+      </div>
+      <div style={{marginTop:'20px'}}>
+        {BDI2.items.map((item, idx) => (
+          <BDI2Question key={idx} item={item} idx={idx} selectedValue={answers[idx]} onAnswer={onAnswer}
+            isSkipped={idx < maxAnsweredIdx && (answers[idx] === null || answers[idx] === undefined || answers[idx] === '')} />
+        ))}
+      </div>
+      {allAnswered && scoringResult && (
+        <div className="export-section">
+          <h3>תוצאות השאלון</h3>
+          <div className="result-summary">
+            <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+            <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+          </div>
+          <button className="export-btn" onClick={() => exportQuestionnaire(BDI2.name, answers, scoringResult)}>הורד תוצאות (טקסט)</button>
+          <button className="export-btn" onClick={() => exportQuestionnaireExcel(BDI2, answers, scoringResult)}>ייצוא לאקסל</button>
+          <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(BDI2.name, BDI2.fullName, scoringResult, {...answers})}>הוסף לתוצאות</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ColumbiaQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+  const ideationCount = COLUMBIA.ideationItems.length;
+  const behaviorCount = COLUMBIA.behaviorItems.length;
+  const totalMainItems = (ideationCount + behaviorCount + 1) * 2; // +1 for NSSI, x2 for timeframes
+
+  const answeredCount = () => {
+    let count = 0;
+    COLUMBIA.ideationItems.forEach((item, i) => {
+      if (answers['id_life_' + i] === '1' || answers['id_life_' + i] === '0') count++;
+      if (answers['id_3m_' + i] === '1' || answers['id_3m_' + i] === '0') count++;
+    });
+    COLUMBIA.behaviorItems.forEach((item, i) => {
+      if (answers['beh_life_' + i] === '1' || answers['beh_life_' + i] === '0') count++;
+      if (answers['beh_3m_' + i] === '1' || answers['beh_3m_' + i] === '0') count++;
+    });
+    if (answers['nssi_life'] === '1' || answers['nssi_life'] === '0') count++;
+    if (answers['nssi_3m'] === '1' || answers['nssi_3m'] === '0') count++;
+    return count;
+  };
+
+  const hasAnyIdeation = COLUMBIA.ideationItems.some((_, i) => answers['id_life_' + i] === '1' || answers['id_3m_' + i] === '1');
+  const highestIdeation = () => {
+    for (let i = 4; i >= 0; i--) {
+      if (answers['id_life_' + i] === '1' || answers['id_3m_' + i] === '1') return i + 1;
+    }
+    return 0;
+  };
+
+  const calcRisk = () => {
+    const beh3m = COLUMBIA.behaviorItems.some((_, i) => answers['beh_3m_' + i] === '1');
+    const behLife = COLUMBIA.behaviorItems.some((_, i) => answers['beh_life_' + i] === '1');
+    const id5 = answers['id_3m_4'] === '1' || answers['id_life_4'] === '1';
+    const id4 = answers['id_3m_3'] === '1' || answers['id_life_3'] === '1';
+    const id3 = answers['id_3m_2'] === '1' || answers['id_life_2'] === '1';
+    const id2 = answers['id_3m_1'] === '1' || answers['id_life_1'] === '1';
+    const id1 = answers['id_3m_0'] === '1' || answers['id_life_0'] === '1';
+    if (beh3m || id5) return {level: 'סיכון גבוה', cls: 'risk-high'};
+    if (behLife || id4 || id3) return {level: 'סיכון בינוני', cls: 'risk-moderate'};
+    if (id2 || id1) return {level: 'סיכון נמוך', cls: 'risk-low'};
+    return {level: 'ללא סיכון מזוהה', cls: 'risk-low'};
+  };
+
+  const ansTotal = answeredCount();
+  const pct = totalMainItems > 0 ? Math.round(ansTotal / totalMainItems * 100) : 0;
+  const risk = calcRisk();
+  const hasAnyBehavior = COLUMBIA.behaviorItems.some((_, i) => answers['beh_life_' + i] === '1' || answers['beh_3m_' + i] === '1');
+  const hasActualAttempt = answers['beh_life_0'] === '1' || answers['beh_3m_0'] === '1';
+
+  const inputStyle = {padding:'8px',border:'2px solid #e2e8f0',borderRadius:'8px',fontFamily:'inherit',fontSize:'.9em',width:'100%'};
+  const textareaStyle = {padding:'10px',border:'2px solid #e2e8f0',borderRadius:'8px',fontFamily:'inherit',fontSize:'.9em',width:'100%',minHeight:'60px',resize:'vertical'};
+
+  return (
+    <div className="section">
+      <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+      </div>
+      <h3 className="section-title">{COLUMBIA.fullName}</h3>
+      <div className="progress-text">
+        <span>ענו: {ansTotal} / {totalMainItems}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="progress-wrap">
+        <div className="progress-fill high" style={{width: pct + '%'}}></div>
+      </div>
+      <div style={{marginBottom:'20px',color:'#64748b',fontSize:'.9em'}}>{COLUMBIA.description}</div>
+
+      {/* Section 1: Suicidal Ideation */}
+      <div style={{background:'#fef9c3',borderRadius:'12px',padding:'16px',marginBottom:'20px',borderRight:'4px solid #f59e0b'}}>
+        <h4 style={{color:'#854d0e',marginBottom:'16px',fontSize:'1.05em'}}>חלק א: הרהורים אובדניים</h4>
+        <p style={{color:'#92400e',fontSize:'.85em',marginBottom:'16px'}}>שאל שאלות 1 ו-2. אם שתיהן שליליות, דלג לחלק התנהגות אובדנית. אם התשובה לשאלה 1 ו/או 2 חיובית, שאל שאלות 3, 4, ו-5.</p>
+
+        {COLUMBIA.ideationItems.map((item, i) => {
+          const lifeKey = 'id_life_' + i;
+          const threeKey = 'id_3m_' + i;
+          const descLifeKey = 'id_desc_life_' + i;
+          const descThreeKey = 'id_desc_3m_' + i;
+          const isLifeYes = answers[lifeKey] === '1';
+          const isThreeYes = answers[threeKey] === '1';
+          return (
+            <div key={i} className={'q-item ' + ((answers[lifeKey] || answers[threeKey]) ? 'answered' : '')} style={{marginBottom:'16px'}}>
+              <div className="q-text"><span className="q-num">{item.num}</span> {item.text}</div>
+              <div style={{fontSize:'.82em',color:'#64748b',marginBottom:'10px',paddingRight:'10px'}}>{item.desc}</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                <div style={{background:'#f8fafc',padding:'10px',borderRadius:'8px'}}>
+                  <div style={{fontWeight:'600',fontSize:'.8em',color:'#475569',marginBottom:'6px'}}>בזמן כלשהו בחיים</div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button className={'q-opt ' + (answers[lifeKey] === '1' ? 'selected' : '')}
+                      onClick={() => onAnswer(lifeKey, answers[lifeKey] === '1' ? null : '1')}>כן</button>
+                    <button className={'q-opt ' + (answers[lifeKey] === '0' ? 'selected' : '')}
+                      onClick={() => onAnswer(lifeKey, answers[lifeKey] === '0' ? null : '0')}>לא</button>
+                  </div>
+                  {isLifeYes && (
+                    <div style={{marginTop:'8px'}}>
+                      <label style={{fontSize:'.78em',color:'#854d0e',fontWeight:'600'}}>אם כן, נא לתאר:</label>
+                      <textarea style={{...textareaStyle,minHeight:'45px'}} placeholder="תאר/י..." value={answers[descLifeKey] || ''}
+                        onChange={e => onAnswer(descLifeKey, e.target.value)} />
+                    </div>
+                  )}
+                </div>
+                <div style={{background:'#f8fafc',padding:'10px',borderRadius:'8px'}}>
+                  <div style={{fontWeight:'600',fontSize:'.8em',color:'#475569',marginBottom:'6px'}}>ב-3 החודשים האחרונים</div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button className={'q-opt ' + (answers[threeKey] === '1' ? 'selected' : '')}
+                      onClick={() => onAnswer(threeKey, answers[threeKey] === '1' ? null : '1')}>כן</button>
+                    <button className={'q-opt ' + (answers[threeKey] === '0' ? 'selected' : '')}
+                      onClick={() => onAnswer(threeKey, answers[threeKey] === '0' ? null : '0')}>לא</button>
+                  </div>
+                  {isThreeYes && (
+                    <div style={{marginTop:'8px'}}>
+                      <label style={{fontSize:'.78em',color:'#854d0e',fontWeight:'600'}}>אם כן, נא לתאר:</label>
+                      <textarea style={{...textareaStyle,minHeight:'45px'}} placeholder="תאר/י..." value={answers[descThreeKey] || ''}
+                        onChange={e => onAnswer(descThreeKey, e.target.value)} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Most Severe Ideation Summary */}
+        {hasAnyIdeation && (
+          <div style={{background:'#fff',padding:'14px',borderRadius:'10px',marginTop:'12px',border:'1px solid #fbbf24'}}>
+            <h4 style={{color:'#854d0e',marginBottom:'12px',fontSize:'.92em'}}>המחשבות האובדניות החמורות ביותר</h4>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+              <div>
+                <div style={{fontWeight:'600',fontSize:'.82em',color:'#475569',marginBottom:'6px'}}>בזמן כלשהו במהלך החיים</div>
+                <div style={{marginBottom:'6px'}}>
+                  <label style={{fontSize:'.78em',color:'#64748b'}}>סוג (1-5):</label>
+                  <select value={answers['severe_id_life_type'] || ''} onChange={e => onAnswer('severe_id_life_type', e.target.value)} style={inputStyle}>
+                    <option value="">בחר</option>
+                    <option value="1">(1) משאלת מוות</option>
+                    <option value="2">(2) מחשבות לא ספציפיות</option>
+                    <option value="3">(3) עם שיטה ללא כוונה</option>
+                    <option value="4">(4) עם כוונה ללא תוכנית</option>
+                    <option value="5">(5) עם תוכנית וכוונה</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{fontSize:'.78em',color:'#64748b'}}>תיאור:</label>
+                  <textarea style={{...textareaStyle,minHeight:'40px'}} placeholder="תאר/י את המחשבות..." value={answers['severe_id_life_desc'] || ''}
+                    onChange={e => onAnswer('severe_id_life_desc', e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <div style={{fontWeight:'600',fontSize:'.82em',color:'#475569',marginBottom:'6px'}}>ב-3 החודשים האחרונים</div>
+                <div style={{marginBottom:'6px'}}>
+                  <label style={{fontSize:'.78em',color:'#64748b'}}>סוג (1-5):</label>
+                  <select value={answers['severe_id_3m_type'] || ''} onChange={e => onAnswer('severe_id_3m_type', e.target.value)} style={inputStyle}>
+                    <option value="">בחר</option>
+                    <option value="1">(1) משאלת מוות</option>
+                    <option value="2">(2) מחשבות לא ספציפיות</option>
+                    <option value="3">(3) עם שיטה ללא כוונה</option>
+                    <option value="4">(4) עם כוונה ללא תוכנית</option>
+                    <option value="5">(5) עם תוכנית וכוונה</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{fontSize:'.78em',color:'#64748b'}}>תיאור:</label>
+                  <textarea style={{...textareaStyle,minHeight:'40px'}} placeholder="תאר/י את המחשבות..." value={answers['severe_id_3m_desc'] || ''}
+                    onChange={e => onAnswer('severe_id_3m_desc', e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Section 2: Intensity of Ideation */}
+      {hasAnyIdeation && (
+        <div style={{background:'#fef2f2',borderRadius:'12px',padding:'16px',marginBottom:'20px',borderRight:'4px solid #ef4444'}}>
+          <h4 style={{color:'#991b1b',marginBottom:'12px',fontSize:'1.05em'}}>חלק ב: עוצמת ההרהורים האובדניים</h4>
+          <p style={{color:'#991b1b',fontSize:'.85em',marginBottom:'16px'}}>
+            יש לדרג את סוג ההרהור החמור ביותר שסומן (סוג {highestIdeation()}). התייחס/י לתקופה שבה ההרהורים היו החמורים ביותר.
+          </p>
+          {COLUMBIA.intensityItems.map((item, i) => {
+            const key = 'intensity_' + i;
+            return (
+              <div key={i} className={'q-item ' + (answers[key] ? 'answered' : '')} style={{marginBottom:'12px'}}>
+                <div className="q-text">{item.text}</div>
+                <div className="q-options" style={{flexDirection:'column',gap:'6px'}}>
+                  {item.options.map((opt, oi) => (
+                    <button key={oi} className={'q-opt ' + (answers[key] == opt.v ? 'selected' : '')}
+                      onClick={() => onAnswer(key, answers[key] == opt.v ? null : opt.v)}
+                      style={{textAlign:'right',justifyContent:'flex-start'}}>
+                      ({opt.v}) {opt.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {/* Total intensity score */}
+          <div style={{background:'#fff',padding:'10px',borderRadius:'8px',marginTop:'10px',fontSize:'.85em',color:'#991b1b'}}>
+            <strong>סה"כ ציון עוצמה: </strong>
+            {COLUMBIA.intensityItems.reduce((sum, _, i) => sum + (parseInt(answers['intensity_' + i]) || 0), 0)} / 25
+          </div>
+        </div>
+      )}
+
+      {/* Section 3: Suicidal Behavior */}
+      <div style={{background:'#fce7f3',borderRadius:'12px',padding:'16px',marginBottom:'20px',borderRight:'4px solid #ec4899'}}>
+        <h4 style={{color:'#831843',marginBottom:'16px',fontSize:'1.05em'}}>חלק ג: התנהגות אובדנית</h4>
+        <p style={{color:'#9d174d',fontSize:'.85em',marginBottom:'16px'}}>יש להתייחס לכל סוג אירוע בנפרד. חובה לשאול על כל הסוגים.</p>
+
+        {COLUMBIA.behaviorItems.map((item, i) => {
+          const lifeKey = 'beh_life_' + i;
+          const threeKey = 'beh_3m_' + i;
+          const countLifeKey = 'beh_count_life_' + i;
+          const countThreeKey = 'beh_count_3m_' + i;
+          const descKey = 'beh_desc_' + i;
+          const isLifeYes = answers[lifeKey] === '1';
+          const isThreeYes = answers[threeKey] === '1';
+          const isAnyYes = isLifeYes || isThreeYes;
+          return (
+            <div key={i} className={'q-item ' + ((answers[lifeKey] || answers[threeKey]) ? 'answered' : '')} style={{marginBottom:'16px'}}>
+              <div className="q-text"><span className="q-num">{item.num}</span> {item.text}</div>
+              <div style={{fontSize:'.82em',color:'#64748b',marginBottom:'10px',paddingRight:'10px'}}>{item.desc}</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                <div style={{background:'#f8fafc',padding:'10px',borderRadius:'8px'}}>
+                  <div style={{fontWeight:'600',fontSize:'.8em',color:'#475569',marginBottom:'6px'}}>בזמן כלשהו בחיים</div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button className={'q-opt ' + (answers[lifeKey] === '1' ? 'selected' : '')}
+                      onClick={() => onAnswer(lifeKey, answers[lifeKey] === '1' ? null : '1')}>כן</button>
+                    <button className={'q-opt ' + (answers[lifeKey] === '0' ? 'selected' : '')}
+                      onClick={() => onAnswer(lifeKey, answers[lifeKey] === '0' ? null : '0')}>לא</button>
+                  </div>
+                  {item.hasCount && isLifeYes && (
+                    <div style={{marginTop:'6px'}}>
+                      <label style={{fontSize:'.78em',color:'#831843',fontWeight:'600'}}>מספר כולל:</label>
+                      <input type="number" min="0" style={{...inputStyle,width:'80px'}} value={answers[countLifeKey] || ''}
+                        onChange={e => onAnswer(countLifeKey, e.target.value)} />
+                    </div>
+                  )}
+                </div>
+                <div style={{background:'#f8fafc',padding:'10px',borderRadius:'8px'}}>
+                  <div style={{fontWeight:'600',fontSize:'.8em',color:'#475569',marginBottom:'6px'}}>ב-3 החודשים האחרונים</div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button className={'q-opt ' + (answers[threeKey] === '1' ? 'selected' : '')}
+                      onClick={() => onAnswer(threeKey, answers[threeKey] === '1' ? null : '1')}>כן</button>
+                    <button className={'q-opt ' + (answers[threeKey] === '0' ? 'selected' : '')}
+                      onClick={() => onAnswer(threeKey, answers[threeKey] === '0' ? null : '0')}>לא</button>
+                  </div>
+                  {item.hasCount && isThreeYes && (
+                    <div style={{marginTop:'6px'}}>
+                      <label style={{fontSize:'.78em',color:'#831843',fontWeight:'600'}}>מספר כולל:</label>
+                      <input type="number" min="0" style={{...inputStyle,width:'80px'}} value={answers[countThreeKey] || ''}
+                        onChange={e => onAnswer(countThreeKey, e.target.value)} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              {isAnyYes && (
+                <div style={{marginTop:'8px'}}>
+                  <label style={{fontSize:'.78em',color:'#831843',fontWeight:'600'}}>תיאור:</label>
+                  <textarea style={{...textareaStyle,minHeight:'45px'}} placeholder="תאר/י את ההתנהגות..." value={answers[descKey] || ''}
+                    onChange={e => onAnswer(descKey, e.target.value)} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Non-Suicidal Self-Injury */}
+        <div style={{background:'#fdf2f8',padding:'14px',borderRadius:'10px',marginTop:'12px',border:'1px solid #f9a8d4'}}>
+          <div className="q-text" style={{fontWeight:'700',marginBottom:'4px'}}>{COLUMBIA.nssiItem.text}</div>
+          <div style={{fontSize:'.82em',color:'#64748b',marginBottom:'10px'}}>{COLUMBIA.nssiItem.desc}</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+            <div style={{background:'#fff',padding:'10px',borderRadius:'8px'}}>
+              <div style={{fontWeight:'600',fontSize:'.8em',color:'#475569',marginBottom:'6px'}}>בזמן כלשהו בחיים</div>
+              <div style={{display:'flex',gap:'8px'}}>
+                <button className={'q-opt ' + (answers['nssi_life'] === '1' ? 'selected' : '')}
+                  onClick={() => onAnswer('nssi_life', answers['nssi_life'] === '1' ? null : '1')}>כן</button>
+                <button className={'q-opt ' + (answers['nssi_life'] === '0' ? 'selected' : '')}
+                  onClick={() => onAnswer('nssi_life', answers['nssi_life'] === '0' ? null : '0')}>לא</button>
+              </div>
+            </div>
+            <div style={{background:'#fff',padding:'10px',borderRadius:'8px'}}>
+              <div style={{fontWeight:'600',fontSize:'.8em',color:'#475569',marginBottom:'6px'}}>ב-3 החודשים האחרונים</div>
+              <div style={{display:'flex',gap:'8px'}}>
+                <button className={'q-opt ' + (answers['nssi_3m'] === '1' ? 'selected' : '')}
+                  onClick={() => onAnswer('nssi_3m', answers['nssi_3m'] === '1' ? null : '1')}>כן</button>
+                <button className={'q-opt ' + (answers['nssi_3m'] === '0' ? 'selected' : '')}
+                  onClick={() => onAnswer('nssi_3m', answers['nssi_3m'] === '0' ? null : '0')}>לא</button>
+              </div>
+            </div>
+          </div>
+          {(answers['nssi_life'] === '1' || answers['nssi_3m'] === '1') && (
+            <div style={{marginTop:'8px'}}>
+              <label style={{fontSize:'.78em',color:'#831843',fontWeight:'600'}}>תיאור הפגיעה העצמית:</label>
+              <textarea style={{...textareaStyle,minHeight:'45px'}} placeholder="תאר/י..." value={answers['nssi_desc'] || ''}
+                onChange={e => onAnswer('nssi_desc', e.target.value)} />
+            </div>
+          )}
+        </div>
+
+        {/* Lethality / Medical Damage - only if actual attempt */}
+        {hasActualAttempt && (
+          <div style={{background:'#fff',padding:'16px',borderRadius:'10px',marginTop:'14px',border:'1px solid #f472b6'}}>
+            <h4 style={{color:'#831843',marginBottom:'12px',fontSize:'.92em'}}>קטלניות / נזק רפואי (יש לענות לגבי ניסיונות בפועל בלבד)</h4>
+
+            <div style={{marginBottom:'14px'}}>
+              <label style={{fontWeight:'600',color:'#475569',fontSize:'.85em',display:'block',marginBottom:'6px'}}>נזק רפואי/פיזי בפועל:</label>
+              <div className="q-options" style={{flexDirection:'column',gap:'6px'}}>
+                {COLUMBIA.lethalityScale.map((opt, oi) => (
+                  <button key={oi} className={'q-opt ' + (answers['lethality_actual'] == opt.v ? 'selected' : '')}
+                    onClick={() => onAnswer('lethality_actual', answers['lethality_actual'] == opt.v ? null : opt.v)}
+                    style={{textAlign:'right',justifyContent:'flex-start',fontSize:'.85em'}}>
+                    ({opt.v}) {opt.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {answers['lethality_actual'] != null && parseInt(answers['lethality_actual']) === 0 && (
+              <div style={{marginBottom:'14px'}}>
+                <label style={{fontWeight:'600',color:'#475569',fontSize:'.85em',display:'block',marginBottom:'6px'}}>אפשרות של תוצאה קטלנית (רק אם נזק בפועל = 0):</label>
+                <div className="q-options" style={{flexDirection:'column',gap:'6px'}}>
+                  {COLUMBIA.potentialLethalityScale.map((opt, oi) => (
+                    <button key={oi} className={'q-opt ' + (answers['lethality_potential'] == opt.v ? 'selected' : '')}
+                      onClick={() => onAnswer('lethality_potential', answers['lethality_potential'] == opt.v ? null : opt.v)}
+                      style={{textAlign:'right',justifyContent:'flex-start',fontSize:'.85em'}}>
+                      ({opt.v}) {opt.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="intake-row" style={{marginTop:'10px'}}>
+              <div className="intake-field">
+                <label style={{fontSize:'.82em',fontWeight:'600',color:'#475569'}}>תאריך הניסיון הראשון:</label>
+                <input type="text" placeholder="תאריך" value={answers['beh_first_date'] || ''}
+                  onChange={e => onAnswer('beh_first_date', e.target.value)} style={inputStyle} />
+              </div>
+              <div className="intake-field">
+                <label style={{fontSize:'.82em',fontWeight:'600',color:'#475569'}}>תאריך הניסיון האחרון:</label>
+                <input type="text" placeholder="תאריך" value={answers['beh_last_date'] || ''}
+                  onChange={e => onAnswer('beh_last_date', e.target.value)} style={inputStyle} />
+              </div>
+            </div>
+            <div style={{marginTop:'10px'}}>
+              <label style={{fontSize:'.82em',fontWeight:'600',color:'#475569'}}>שיטה הכי קטלנית:</label>
+              <textarea style={{...textareaStyle,minHeight:'45px'}} placeholder="תאר/י את השיטה הכי קטלנית שנעשה בה שימוש..." value={answers['beh_method'] || ''}
+                onChange={e => onAnswer('beh_method', e.target.value)} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Risk Summary */}
+      <div className="export-section">
+        <h3>הערכת סיכון</h3>
+        <div className="result-summary">
+          <div className={'risk-badge ' + risk.cls}>{risk.level}</div>
+        </div>
+        {hasAnyIdeation && (
+          <div style={{margin:'10px 0',fontSize:'.88em',color:'#475569'}}>
+            <div>סוג הרהור חמור ביותר: <strong>{highestIdeation()}</strong></div>
+            <div>סה"כ ציון עוצמה: <strong>{COLUMBIA.intensityItems.reduce((s, _, i) => s + (parseInt(answers['intensity_' + i]) || 0), 0)}/25</strong></div>
+          </div>
+        )}
+        <button className="export-btn" onClick={() => exportQuestionnaire(COLUMBIA.name, answers, {total: ansTotal, max: totalMainItems, severity: risk.level})}>הורד תוצאות (טקסט)</button>
+        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(COLUMBIA.name, COLUMBIA.fullName, {total: ansTotal, max: totalMainItems, severity: risk.level, cls: risk.cls.replace('risk-','sev-')}, {...answers})}>הוסף לתוצאות</button>
+      </div>
+    </div>
+  );
+}
+
+
+function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+  const items = LEC5.items;
+  const opts = LEC5.responseOptions;
+  const answeredItems = items.filter((_, i) => opts.some((_, oi) => answers['lec_' + i + '_' + oi])).length;
+  const pct = Math.round(answeredItems / items.length * 100);
+  const hasAnyEvent = items.some((_, i) => [0,1,2,3].some(oi => answers['lec_' + i + '_' + oi]));
+
+  return (
+    <div className="section">
+      <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+      </div>
+      <h3 className="section-title">{LEC5.fullName}</h3>
+      <div className="progress-text">
+        <span>ענו: {answeredItems} / {items.length}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="progress-wrap">
+        <div className="progress-fill high" style={{width: pct + '%'}}></div>
+      </div>
+      <div style={{marginBottom:'16px',color:'#64748b',fontSize:'.9em'}}>{LEC5.description}</div>
+
+      {/* Header row */}
+      <div style={{overflowX:'auto'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.82em',minWidth:'700px'}}>
+          <thead>
+            <tr style={{background:'#f1f5f9'}}>
+              <th style={{padding:'10px',textAlign:'right',borderBottom:'2px solid #e2e8f0',width:'30%'}}>אירוע</th>
+              {opts.map((opt, oi) => (
+                <th key={oi} style={{padding:'6px',textAlign:'center',borderBottom:'2px solid #e2e8f0',fontSize:'.9em',fontWeight:'600',color:'#475569'}}>{opt}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, i) => {
+              const hasResponse = opts.some((_, oi) => answers['lec_' + i + '_' + oi]);
+              return (
+                <tr key={i} style={{borderBottom:'1px solid #e2e8f0',background: hasResponse ? '#eff6ff' : 'transparent'}}>
+                  <td style={{padding:'10px',fontWeight:'500',color:'#1e293b'}}>
+                    {i+1}. {item}
+                    {i === items.length - 1 && (
+                      <div style={{marginTop:'6px'}}>
+                        <input type="text" placeholder="פרט/י את האירוע..." value={answers['lec_other_desc'] || ''}
+                          onChange={e => onAnswer('lec_other_desc', e.target.value)}
+                          style={{padding:'6px 8px',border:'1px solid #cbd5e1',borderRadius:'6px',fontFamily:'inherit',fontSize:'.85em',width:'100%'}} />
+                      </div>
+                    )}
+                  </td>
+                  {opts.map((_, oi) => {
+                    const key = 'lec_' + i + '_' + oi;
+                    return (
+                      <td key={oi} style={{textAlign:'center',padding:'6px'}}>
+                        <input type="checkbox" checked={!!answers[key]}
+                          onChange={() => onAnswer(key, answers[key] ? null : true)}
+                          style={{width:'18px',height:'18px',cursor:'pointer',accentColor:'#3b82f6'}} />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Criterion A - worst event details */}
+      {hasAnyEvent && (
+        <div style={{background:'#fef9c3',borderRadius:'12px',padding:'16px',marginTop:'20px',borderRight:'4px solid #f59e0b'}}>
+          <h4 style={{color:'#854d0e',marginBottom:'12px',fontSize:'.95em'}}>{LEC5.criterionA.text}</h4>
+          {LEC5.criterionA.fields.map((field, fi) => (
+            <div key={fi} style={{marginBottom:'12px'}}>
+              <label style={{fontWeight:'600',color:'#475569',fontSize:'.85em',display:'block',marginBottom:'4px'}}>{field}</label>
+              {fi === 0 ? (
+                <textarea className="crit-a-text" placeholder="תאר/י..." value={answers['lec_critA_' + fi] || ''}
+                  onChange={e => onAnswer('lec_critA_' + fi, e.target.value)} />
+              ) : (
+                <input type="text" value={answers['lec_critA_' + fi] || ''}
+                  onChange={e => onAnswer('lec_critA_' + fi, e.target.value)}
+                  style={{padding:'10px',border:'2px solid #e2e8f0',borderRadius:'8px',width:'100%',fontFamily:'inherit',fontSize:'.95em'}} />
+              )}
+            </div>
+          ))}
+          {/* Yes/No questions about the event */}
+          {LEC5.criterionA.yesNoQuestions && (
+            <div style={{marginTop:'14px',marginBottom:'14px'}}>
+              {LEC5.criterionA.yesNoQuestions.map((q, qi) => (
+                <div key={qi} style={{marginBottom:'10px',padding:'10px',background:'#fff',borderRadius:'8px'}}>
+                  <div style={{fontWeight:'600',color:'#475569',fontSize:'.85em',marginBottom:'6px'}}>{q}</div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button className={'q-opt ' + (answers['lec_critA_yn_' + qi] === '1' ? 'selected' : '')}
+                      onClick={() => onAnswer('lec_critA_yn_' + qi, answers['lec_critA_yn_' + qi] === '1' ? null : '1')}
+                      style={{fontSize:'.82em'}}>כן</button>
+                    <button className={'q-opt ' + (answers['lec_critA_yn_' + qi] === '0' ? 'selected' : '')}
+                      onClick={() => onAnswer('lec_critA_yn_' + qi, answers['lec_critA_yn_' + qi] === '0' ? null : '0')}
+                      style={{fontSize:'.82em'}}>לא</button>
+                  </div>
+                  {answers['lec_critA_yn_' + qi] === '1' && (
+                    <div style={{marginTop:'6px'}}>
+                      <input type="text" placeholder="פרט/י..." value={answers['lec_critA_yn_desc_' + qi] || ''}
+                        onChange={e => onAnswer('lec_critA_yn_desc_' + qi, e.target.value)}
+                        style={{padding:'6px 8px',border:'1px solid #cbd5e1',borderRadius:'6px',fontFamily:'inherit',fontSize:'.85em',width:'100%'}} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{marginTop:'8px'}}>
+            <label style={{fontWeight:'600',color:'#475569',fontSize:'.85em',display:'block',marginBottom:'6px'}}>סוג חשיפה לאירוע:</label>
+            <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+              {["חוויה ישירה","עדות לאירוע","נודע לי על אירוע שקרה לקרוב","חשיפה חוזרת לפרטים (כחלק מעבודה)"].map((opt, oi) => (
+                <button key={oi} className={'q-opt ' + (answers['lec_exposure'] === opt ? 'selected' : '')}
+                  onClick={() => onAnswer('lec_exposure', answers['lec_exposure'] === opt ? null : opt)}
+                  style={{fontSize:'.8em'}}>{opt}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="export-section" style={{marginTop:'24px'}}>
+        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => {
+          const endorsed = items.filter((_, i) => [0,1,2,3].some(oi => answers['lec_' + i + '_' + oi])).length;
+          onAddResults(LEC5.name, LEC5.fullName, {total: endorsed, max: items.length, severity: endorsed > 0 ? endorsed + ' אירועים דווחו' : 'אין אירועים', cls: endorsed >= 5 ? 'sev-severe' : endorsed >= 2 ? 'sev-moderate' : endorsed >= 1 ? 'sev-mild' : 'sev-normal'}, {...answers});
+        }}>הוסף לתוצאות</button>
+      </div>
+    </div>
+  );
+}
+
+function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+  const items = SHS.items;
+  const labels = SHS.itemScaleLabels;
+  const answeredCount = Object.keys(answers).filter(k => !isNaN(parseInt(k))).length;
+  const pct = Math.round(answeredCount / items.length * 100);
+
+  return (
+    <div className="section">
+      <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+      </div>
+      <h3 className="section-title">{SHS.fullName}</h3>
+      <div className="progress-text">
+        <span>ענו: {answeredCount} / {items.length}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="progress-wrap">
+        <div className="progress-fill high" style={{width: pct + '%'}}></div>
+      </div>
+      <div style={{marginBottom:'20px',color:'#64748b',fontSize:'.9em'}}>{SHS.description}</div>
+
+      {items.map((item, i) => (
+        <div key={i} className={'q-item ' + (answers[i] != null ? 'answered' : '')} style={{marginBottom:'16px'}}>
+          <div className="q-text"><span className="q-num">{i + 1}</span> {item}</div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.78em',color:'#64748b',marginBottom:'6px',padding:'0 4px'}}>
+            <span>{labels[i].low}</span>
+            <span>{labels[i].high}</span>
+          </div>
+          <div className="q-options">
+            {[1,2,3,4,5,6,7].map(v => (
+              <button key={v} className={'q-opt ' + (answers[i] == v ? 'selected' : '')}
+                onClick={() => onAnswer(i, answers[i] == v ? null : v)}
+                style={{minWidth:'36px',padding:'8px 4px'}}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div className="export-section">
+        <h3>תוצאות</h3>
+        {answeredCount === items.length && (() => {
+          const results = SHS.scoring(answers);
+          return (
+            <div className="result-summary">
+              <div className="score-display">{results.total} / {results.max}</div>
+              <div className={'severity-badge ' + results.cls}>{results.severity}</div>
+              <div style={{fontSize:'.82em',color:'#64748b',marginTop:'8px'}}>ציון ממוצע (פריט 4 הפוך)</div>
+            </div>
+          );
+        })()}
+        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)',marginTop:'10px'}} onClick={() => {
+          const results = SHS.scoring(answers);
+          onAddResults(SHS.name, SHS.fullName, results, {...answers});
+        }}>הוסף לתוצאות</button>
+      </div>
+    </div>
+  );
+}
+
+function ResultsView({data}) {
+  return (
+    <div className="section">
+      <h3 className="section-title">תוצאות</h3>
+      {!data || Object.keys(data).length === 0 ? (
+        <p style={{color:'#64748b'}}>אין תוצאות להצגה. השלם שאלונים והוסף אותם לתוצאות.</p>
+      ) : (
+        Object.entries(data).map(([key, result]) => (
+          <div key={key} className="result-card">
+            <h3>{result.qname}</h3>
+            {result.results && (
+              <>
+                <div className="score-display">{result.results.total}/{result.results.max}</div>
+                <div className={`severity-badge ${result.results.cls}`}>{result.results.severity}</div>
+                {result.results.subdomains && result.results.subdomains.length > 1 && (
+                  <div className="subdomain">
+                    {result.results.subdomains.filter(sub => sub.name && sub.name.trim() !== '').map((sub, idx) => (
+                      <div key={idx}>
+                        <div className="subdomain-row">
+                          <span className="subdomain-label">{sub.name}</span>
+                          <span className="subdomain-val">{sub.score !== undefined ? sub.score : 0}/{sub.max}</span>
+                        </div>
+                        <div className="bar-bg">
+                          <div className="bar-fill" style={{width: (sub.max > 0 ? (sub.score||0)/sub.max*100 : 0) + '%', background:'#3b82f6'}}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))
+      )}
+      {data && Object.keys(data).length > 0 && (
+        <div style={{marginTop:'30px'}}>
+          <button className="export-btn" onClick={() => exportSummaryExcel(data)}>ייצוא סיכום לאקסל</button>
+          <button className="export-btn" onClick={() => exportFullDetailedExcel(data)}>ייצוא מפורט לאקסל</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiagnosisView({results, selectedDiags, setSelectedDiags}) {
+  const [diagSearch, setDiagSearch] = useState('');
+  const suggestions = getSuggestedDiagnoses(results);
+
+  const addDiag = (diag) => {
+    if (!selectedDiags.some(d => d.code === diag.code)) {
+      setSelectedDiags(prev => [...prev, {...diag, addedAt: new Date().toISOString()}]);
+    }
+  };
+
+  const removeDiag = (code) => {
+    setSelectedDiags(prev => prev.filter(d => d.code !== code));
+  };
+
+  const addAllSuggestions = () => {
+    const toAdd = suggestions.filter(s => !selectedDiags.some(d => d.code === s.code));
+    if (toAdd.length === 0) { alert('כל האבחנות המומלצות כבר ברשימה'); return; }
+    if (confirm('להוסיף ' + toAdd.length + ' אבחנות מומלצות?')) {
+      setSelectedDiags(prev => [...prev, ...toAdd.map(d => ({...d, addedAt: new Date().toISOString()}))]);
+    }
+  };
+
+  const filteredCodes = diagSearch.trim() === ''
+    ? F_CODES_DATA
+    : F_CODES_DATA.map(cat => ({
+        ...cat,
+        items: cat.items.filter(item =>
+          item.code.toLowerCase().includes(diagSearch.toLowerCase()) ||
+          item.label.toLowerCase().includes(diagSearch.toLowerCase())
+        )
+      })).filter(cat => cat.items.length > 0);
+
+  return (
+    <div className="content">
+      <div style={{marginBottom:'20px'}}>
+
+      </div>
+
+      {/* Selected diagnoses */}
+      {selectedDiags.length > 0 && (
+        <div className="section">
+          <h3 className="section-title">אבחנות שנבחרו ({selectedDiags.length})</h3>
+          <div className="selected-diags">
+            {selectedDiags.map((d, i) => (
+              <span key={i} className="diag-tag">
+                {d.code}: {d.label.split(' - ')[0]}
+                {d.source && <span style={{opacity:.7,fontSize:'.85em'}}> ({d.source})</span>}
+                <button onClick={() => removeDiag(d.code)}>x</button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Suggestions from questionnaires */}
+      {suggestions.length > 0 && (
+        <div className="suggestion-card">
+          <h4>הצעות אבחנה בהתבסס על תוצאות השאלונים</h4>
+          <button className="auto-suggest-btn" onClick={addAllSuggestions}>הוסף את כל ההצעות</button>
+          {suggestions.map((s, i) => (
+            <div key={i} className="suggestion-item">
+              <span className="suggestion-code">{s.code}</span>
+              <span className="suggestion-label">{s.label}</span>
+              <span className="suggestion-source">{s.source}</span>
+              {selectedDiags.some(d => d.code === s.code)
+                ? <button className="add-diag-btn added" disabled>נוסף</button>
+                : <button className="add-diag-btn" onClick={() => addDiag(s)}>הוסף</button>
+              }
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Full F-code browser */}
+      <div className="section">
+        <h3 className="section-title">מאגר קודי F (ICD-10)</h3>
+        <input className="diag-search" value={diagSearch} onChange={e => setDiagSearch(e.target.value)}
+          placeholder="חיפוש לפי קוד או תיאור..." />
+        {filteredCodes.map((cat, ci) => (
+          <div key={ci} className="fcode-category">
+            <div className="fcode-cat-title">{cat.category}</div>
+            <div className="fcode-items">
+              {cat.items.map((item, ii) => (
+                <div key={ii} className={`fcode-item ${selectedDiags.some(d => d.code === item.code) ? 'selected' : ''}`}
+                  onClick={() => {
+                    if (selectedDiags.some(d => d.code === item.code)) removeDiag(item.code);
+                    else addDiag({code: item.code, label: item.label, source: 'בחירה ידנית'});
+                  }}>
+                  <span className="diag-code">{item.code}</span>
+                  <span className="diag-desc">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BigMenu({onNavigate}) {
+  return (
+    <div className="big-menu">
+      <h2>תפריט ראשי</h2>
+      <div className="big-menu-grid">
+        <button className="big-menu-btn btn-questionnaires" onClick={() => onNavigate('questionnaires')}>
+          <div className="big-icon">📝</div>
+          <div className="big-label">שאלונים</div>
+          <div className="big-sublabel">מילוי שאלונים קליניים</div>
+        </button>
+        <button className="big-menu-btn btn-results" onClick={() => onNavigate('results')}>
+          <div className="big-icon">📊</div>
+          <div className="big-label">תוצאות</div>
+          <div className="big-sublabel">צפייה בתוצאות וייצוא</div>
+        </button>
+        <button className="big-menu-btn btn-codes" onClick={() => onNavigate('diag')}>
+          <div className="big-icon">🏥</div>
+          <div className="big-label">אבחנות F</div>
+          <div className="big-sublabel">קודי אבחון ICD</div>
+        </button>
+        <button className="big-menu-btn btn-sessions" onClick={() => onNavigate('sessions')}>
+          <div className="big-icon">📅</div>
+          <div className="big-label">פגישות</div>
+          <div className="big-sublabel">ניהול פגישות מעקב</div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuestionnaireMenu({onSelectQ, completedQ, onBack}) {
+  return (
+    <div className="main-menu">
+      <div style={{marginBottom:'20px',padding:'0 20px'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט הראשי</button>
+      </div>
+      <div className="menu-header">
+        <h2>בחר שאלון</h2>
+      </div>
+      {QUESTIONNAIRE_DOMAINS.map((domain, di) => {
+        const domainQs = QUESTIONNAIRES.filter(q => domain.questionnaires.includes(q.name));
+        if (domainQs.length === 0) return null;
+        return (
+          <div key={di} className="domain-section" style={{maxWidth:'1200px',margin:'0 auto'}}>
+            <div className="domain-title" style={{borderRightColor: domain.color}}>{domain.name}</div>
+            <div className="domain-grid">
+              {domainQs.map((q, qi) => (
+                <div key={qi} className={`menu-card ${completedQ[q.name] ? 'completed' : ''}`}
+                  onClick={() => onSelectQ(q.name)} style={{cursor:'pointer'}}>
+                  <div className="menu-card-title">{q.name}</div>
+                  <div className="menu-card-desc">{q.fullName}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SessionManager({sessions, currentSession, onSelectSession, onAddSession, onBack}) {
+  const [showForm, setShowForm] = useState(false);
+  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newType, setNewType] = useState('מעקב');
+
+  return (
+    <div className="session-mgmt">
+      <div style={{marginBottom:'20px'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט הראשי</button>
+      </div>
+      <h2>ניהול פגישות</h2>
+      <div className="session-list-container">
+        {sessions.map((session, idx) => (
+          <div key={idx} className={`session-item ${currentSession?.date === session.date ? 'active-session' : ''}`}
+            onClick={() => onSelectSession(session)}>
+            <div className="session-item-info">
+              <div className="session-item-date">{session.date}</div>
+              <div className="session-item-type">{session.type || 'בדיקה'}</div>
+            </div>
+            {currentSession?.date === session.date && (
+              <span className="hdr-badge" style={{background:'#3b82f6',color:'#fff'}}>פעילה</span>
+            )}
+          </div>
+        ))}
+
+        {showForm ? (
+          <div className="session-form">
+            <h3>הוספת פגישה חדשה</h3>
+            <div className="intake-row">
+              <div className="intake-field">
+                <label>תאריך</label>
+                <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
+              </div>
+              <div className="intake-field">
+                <label>סוג</label>
+                <select value={newType} onChange={e => setNewType(e.target.value)}>
+                  <option>מעקב</option>
+                  <option>בדיקה ראשונית</option>
+                  <option>סיום טיפול</option>
+                </select>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:'10px',marginTop:'12px'}}>
+              <button className="add-session-btn" onClick={() => {
+                if(newDate) {
+                  onAddSession({date: newDate, type: newType});
+                  setShowForm(false);
+                  setNewDate(new Date().toISOString().split('T')[0]);
+                }
+              }}>שמור</button>
+              <button className="back-btn" style={{padding:'10px 20px',fontSize:'.9em'}} onClick={() => setShowForm(false)}>ביטול</button>
+            </div>
+          </div>
+        ) : (
+          <div className="add-session-card" onClick={() => setShowForm(true)}>
+            <span style={{fontSize:'1.5em'}}>+</span>
+            <span>הוסף פגישה חדשה</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== EXPORT FUNCTIONS ====================
+
+function exportQuestionnaire(name, answers, results) {
+  const text = `מרפאת הטראומה - הדסה\n================================\n\nשאלון: ${name}\n\nתוצאות: ${results.total || 'לא נחשב'}/${results.max || ''}\nרמת חומרה: ${results.severity || 'N/A'}\n\nתשובות:\n` +
+    Object.entries(answers).map(([k,v]) => `${k}: ${v}`).join('\n');
+  const blob = new Blob([text], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}_results.txt`;
+  a.click();
+}
+
+function exportSummaryExcel(data) {
+  const rows = [['מרפאת הטראומה - הדסה'],['סיכום תוצאות שאלונים'],[''],['שאלון', 'ציון כולל', 'מקסימום', 'רמת חומרה']];
+  Object.entries(data).forEach(([k, result]) => {
+    if(result.results) {
+      rows.push([result.qname, result.results.total, result.results.max, result.results.severity]);
+    }
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+  XLSX.writeFile(wb, 'summary.xlsx');
+}
+
+function exportFullDetailedExcel(data) {
+  const wb = XLSX.utils.book_new();
+  // Summary sheet
+  const summaryRows = [['מרפאת הטראומה - הדסה'],['דו"ח מפורט - תוצאות שאלונים'],[''],['שאלון', 'ציון כולל', 'מקסימום', 'רמת חומרה']];
+  Object.entries(data).forEach(([k, result]) => {
+    if(result.results) {
+      summaryRows.push([result.qname, result.results.total, result.results.max, result.results.severity]);
+    }
+  });
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, summaryWs, 'סיכום');
+
+  // Per-questionnaire sheets with full Q&A
+  Object.entries(data).forEach(([key, result]) => {
+    if(result.results) {
+      const rows = [['שאלון', result.qname],['ציון כולל', result.results.total],['מקסימום', result.results.max],['רמת חומרה', result.results.severity],['']];
+      if(result.results.subdomains && result.results.subdomains.length > 1) {
+        rows.push(['תת-תחומים']);
+        rows.push(['תת-תחום', 'ציון', 'מקסימום']);
+        result.results.subdomains.filter(sub => sub.name).forEach(sub => rows.push([sub.name, sub.score, sub.max]));
+        rows.push(['']);
+      }
+      // Add full questions and answers
+      if(result.answers && result.questionnaire && result.questionnaire.items) {
+        rows.push(['שאלות ותשובות']);
+        rows.push(['מספר', 'שאלה', 'ערך תשובה', 'טקסט תשובה']);
+        const q = result.questionnaire;
+        q.items.forEach((item, idx) => {
+          const qText = typeof item === 'string' ? item : item.q;
+          const ansVal = result.answers[idx];
+          let ansText = '';
+          if(ansVal !== null && ansVal !== undefined && ansVal !== '') {
+            if(q.scale) {
+              const opt = q.scale.find(s => s.v == ansVal);
+              ansText = opt ? opt.l : String(ansVal);
+            } else if(typeof item === 'object' && item.opts) {
+              const opt = item.opts.find(o => o.v == ansVal);
+              ansText = opt ? opt.l : String(ansVal);
+            } else {
+              ansText = ansVal === '1' ? 'כן' : ansVal === '0' ? 'לא' : String(ansVal);
+            }
+          }
+          rows.push([idx + 1, qText, ansVal !== null && ansVal !== undefined ? ansVal : '', ansText]);
+        });
+      }
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, key.substring(0,31));
+    }
+  });
+  XLSX.writeFile(wb, 'results_detailed.xlsx');
+}
+
+function exportQuestionnaireExcel(q, answers, scoringResult) {
+  const rows = [['שאלון', q.fullName],[''],['ציון כולל', scoringResult.total],['מקסימום', scoringResult.max],['רמת חומרה', scoringResult.severity],['']];
+  if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
+    rows.push(['תת-תחומים']);
+    rows.push(['תת-תחום', 'ציון', 'מקסימום']);
+    scoringResult.subdomains.forEach(sub => rows.push([sub.name, sub.score, sub.max]));
+    rows.push(['']);
+  }
+  rows.push(['תשובות']);
+  rows.push(['שאלה', 'תשובה']);
+  if(q.items) {
+    q.items.forEach((item, idx) => {
+      const qText = typeof item === 'string' ? item : item.q;
+      rows.push([qText, answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '']);
+    });
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, q.name);
+  XLSX.writeFile(wb, `${q.name}_results.xlsx`);
+}
+
+// ==================== MAIN APP ====================
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [intake, setIntake] = useState(null);
+  const [currentSession, setCurrentSession] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [activeView, setActiveView] = useState('bigmenu');
+  const [selectedQ, setSelectedQ] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [results, setResults] = useState({});
+  const [completedQ, setCompletedQ] = useState({});
+  const [user, setUser] = useState('');
+  const [pass, setPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState('');
+  const [showEditIntake, setShowEditIntake] = useState(false);
+  const [selectedDiags, setSelectedDiags] = useState([]);
+  const [editForm, setEditForm] = useState({});
+
+  const addToResults = (qName, qFullName, scoringResult, qAnswers) => {
+    const qObj = QUESTIONNAIRES.find(x => x.name === qName);
+    setResults(prev => ({...prev, [qName]: {qname: qFullName, results: scoringResult, answers: qAnswers || {}, questionnaire: qObj}}));
+    setCompletedQ(prev => ({...prev, [qName]: true}));
+  };
+
+  const saveBackup = () => {
+    const backup = {intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags};
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'questionnaire_backup_' + (intake ? intake.name.replace(/\s/g,'_') : 'unknown') + '_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const loadBackup = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.intake) setIntake(data.intake);
+          if (data.sessions) setSessions(data.sessions);
+          if (data.currentSession) setCurrentSession(data.currentSession);
+          if (data.results) setResults(data.results);
+          if (data.completedQ) setCompletedQ(data.completedQ);
+          if (data.answers) setAnswers(data.answers || {});
+          if (data.activeView) setActiveView(data.activeView);
+          if (data.selectedQ) setSelectedQ(data.selectedQ);
+          if (data.selectedDiags) setSelectedDiags(data.selectedDiags);
+          alert('הגיבוי נטען בהצלחה');
+        } catch(err) { alert('שגיאה בטעינת הגיבוי'); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const clearAndRestart = () => {
+    if (confirm('האם אתה בטוח? כל הנתונים יימחקו ותתחיל מחדש.')) {
+      setIntake(null);
+      setCurrentSession(null);
+      setSessions([]);
+      setActiveView('bigmenu');
+      setSelectedQ(null);
+      setAnswers({});
+      setResults({});
+      setCompletedQ({});
+      setSelectedDiags([]);
+    }
+  };
+
+  const openEditIntake = () => {
+    setEditForm({...intake});
+    setShowEditIntake(true);
+  };
+
+  const saveEditIntake = () => {
+    setIntake({...editForm});
+    setShowEditIntake(false);
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="login-bg">
+        <div className="login-card">
+          <img src={LOGO} className="login-logo" alt="לוגו" />
+          <h1 className="login-title">מערכת שאלונים</h1>
+          <p className="login-subtitle">מרפאת הטראומה הדסה</p>
+          <div className="login-field">
+            <label>שם משתמש</label>
+            <input value={user} onChange={e => setUser(e.target.value)} />
+          </div>
+          <div className="login-field">
+            <label>סיסמה</label>
+            <div className="password-wrapper">
+              <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} />
+              <button type="button" className="pass-toggle" onClick={() => setShowPass(!showPass)}>{showPass ? "הסתר" : "הצג"}</button>
+            </div>
+          </div>
+          <button className="login-btn" onClick={() => {
+            if(user && pass) { setIsLoggedIn(true); setError(''); }
+            else setError('אנא הזן שם משתמש וסיסמה');
+          }}>כניסה</button>
+          {error && <div className="login-error">{error}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (!intake) {
+    return (
+      <div className="intake-bg">
+        <div className="intake-card">
+          <div className="intake-header">
+            <h1>טופס רישום חדש</h1>
+            <p>אנא מלא את הפרטים הבסיסיים</p>
+          </div>
+          <div className="intake-section">
+            <h3>פרטי מטופל</h3>
+            <div className="intake-row">
+              <div className="intake-field">
+                <label>שם</label>
+                <input type="text" placeholder="שם מלא" id="patName" />
+              </div>
+              <div className="intake-field">
+                <label>ת.ז.</label>
+                <input type="text" placeholder="תעודת זהות" id="patID" />
+              </div>
+              <div className="intake-field">
+                <label>גיל</label>
+                <input type="number" placeholder="גיל" id="patAge" />
+              </div>
+            </div>
+            <div className="intake-row">
+              <div className="intake-field">
+                <label>מין</label>
+                <select id="patGender">
+                  <option>בחר</option>
+                  <option>זכר</option>
+                  <option>נקבה</option>
+                  <option>אחר</option>
+                </select>
+              </div>
+              <div className="intake-field">
+                <label>אבחנה עיקרית</label>
+                <input type="text" placeholder="אבחנה" id="patDiag" />
+              </div>
+            </div>
+          </div>
+          <div className="intake-section">
+            <h3>פרטי בדיקה</h3>
+            <div className="intake-row">
+              <div className="intake-field">
+                <label>תאריך</label>
+                <input type="date" id="sessionDate" defaultValue={new Date().toISOString().split('T')[0]} />
+              </div>
+              <div className="intake-field">
+                <label>סוג בדיקה</label>
+                <select id="sessionType">
+                  <option>בדיקה ראשונית</option>
+                  <option>מעקב</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="intake-section examiner">
+            <h3>פרטי בודק</h3>
+            <div className="intake-row">
+              <div className="intake-field">
+                <label>שם הבודק</label>
+                <input type="text" placeholder="שם הבודק" id="examName" />
+              </div>
+            </div>
+          </div>
+          <button className="start-btn" onClick={() => {
+            const patName = document.getElementById('patName').value;
+            const patAge = document.getElementById('patAge').value;
+            if(patName && patAge) {
+              const sessionDate = document.getElementById('sessionDate').value;
+              const sessionType = document.getElementById('sessionType').value;
+              setIntake({
+                name: patName, age: patAge, gender: document.getElementById('patGender').value,
+                patID: document.getElementById('patID').value,
+                diag: document.getElementById('patDiag').value,
+                sessionDate, sessionType,
+                examName: document.getElementById('examName').value
+              });
+              const firstSession = {date: sessionDate, type: sessionType};
+              setCurrentSession(firstSession);
+              setSessions([firstSession]);
+            } else {
+              alert('אנא מלא שם וגיל');
+            }
+          }}>התחל</button>
+        </div>
+      </div>
+    );
+  }
+
+  const qName = selectedQ;
+  const q = QUESTIONNAIRES.find(x => x.name === qName);
+
+  const renderContent = () => {
+    if (qName && q) {
+      if (q.name === 'BDI-II') {
+        return (
+          <BDI2Questionnaire answers={answers} onAnswer={(idx, val) => {
+            const newAns = {...answers}; newAns[idx] = val; setAnswers(newAns);
+            if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === BDI2.items.length) {
+              setCompletedQ(prev => ({...prev, [BDI2.name]: true}));
+            }
+          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+        );
+      }
+      if (q.name === 'C-SSRS') {
+        return (
+          <ColumbiaQuestionnaire answers={answers} onAnswer={(key, val) => {
+            const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
+          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+        );
+      }
+      if (q.name === 'LEC-5') {
+        return (
+          <LEC5Questionnaire answers={answers} onAnswer={(key, val) => {
+            const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
+          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+        );
+      }
+      if (q.name === 'SHS') {
+        return (
+          <SHSQuestionnaire answers={answers} onAnswer={(key, val) => {
+            const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
+          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+        );
+      }
+      return (
+        <StandardQuestionnaire q={q} answers={answers} onAnswer={(idx, val) => {
+          const newAns = {...answers}; newAns[idx] = val; setAnswers(newAns);
+          if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === q.items.length) {
+            setCompletedQ(prev => ({...prev, [q.name]: true}));
+          }
+        }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+      );
+    }
+
+    switch(activeView) {
+      case 'bigmenu':
+        return <BigMenu onNavigate={(view) => setActiveView(view)} />;
+      case 'questionnaires':
+        return <QuestionnaireMenu onSelectQ={(name) => { setAnswers({}); setSelectedQ(name); }} completedQ={completedQ} onBack={() => setActiveView('bigmenu')} />;
+      case 'results':
+        return (
+          <div className="content">
+            <div style={{marginBottom:'20px'}}>
+              <button className="back-btn" onClick={() => setActiveView('bigmenu')}>חזור לתפריט הראשי</button>
+            </div>
+            <ResultsView data={results} />
+          </div>
+        );
+      case 'diag':
+        return (
+          <DiagnosisView results={results} selectedDiags={selectedDiags} setSelectedDiags={setSelectedDiags} />
+        );
+      case 'sessions':
+        return <SessionManager sessions={sessions} currentSession={currentSession}
+          onSelectSession={(s) => setCurrentSession(s)}
+          onAddSession={(s) => { setSessions(prev => [...prev, s]); setCurrentSession(s); }}
+          onBack={() => setActiveView('bigmenu')} />;
+      default:
+        return <BigMenu onNavigate={(view) => setActiveView(view)} />;
+    }
+  };
+
+  return (
+    <div className="app">
+      <div className="hdr">
+        <div className="hdr-top">
+          <img src={LOGO} className="hdr-logo" alt="לוגו" />
+          <div className="hdr-clinic-text">מרפאת הטראומה - הדסה</div>
+        </div>
+        <div className="hdr-bottom">
+          <div className="hdr-info">
+            <h1>{intake.name}</h1>
+            <p>פגישה: {currentSession?.date} | {currentSession?.type || intake.sessionType}</p>
+          </div>
+          <div className="hdr-badges">
+            <span className="hdr-badge">בן/בת {intake.age}</span>
+            <span className="hdr-badge">{intake.gender}</span>
+          </div>
+          <button className="logout-btn" onClick={() => {setIsLoggedIn(false); setIntake(null); setSelectedQ(null); setAnswers({}); setActiveView('bigmenu');}}>יציאה</button>
+        </div>
+      </div>
+      <div className="top-nav">
+        <button className={`top-nav-tab ${activeView === 'bigmenu' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('bigmenu'); }}>דף הבית</button>
+        <button className={`top-nav-tab ${activeView === 'questionnaires' || selectedQ ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('questionnaires'); }}>שאלונים</button>
+        <button className={`top-nav-tab ${activeView === 'results' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('results'); }}>תוצאות</button>
+        <button className={`top-nav-tab ${activeView === 'diag' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('diag'); }}>אבחנות F</button>
+        <button className={`top-nav-tab ${activeView === 'sessions' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('sessions'); }}>פגישות</button>
+      </div>
+      <div className="utility-bar">
+        <button className="util-btn" onClick={openEditIntake}>עריכת פרטי נבדק</button>
+        <button className="util-btn" onClick={saveBackup}>שמירת גיבוי</button>
+        <button className="util-btn" onClick={loadBackup}>טעינת גיבוי</button>
+        <button className="util-btn danger" onClick={clearAndRestart}>נקה והתחל מחדש</button>
+      </div>
+      {showEditIntake && (
+        <div className="modal-overlay" onClick={(e) => { if(e.target === e.currentTarget) setShowEditIntake(false); }}>
+          <div className="modal-card">
+            <h2>עריכת פרטי נבדק</h2>
+            <div className="intake-section">
+              <h3>פרטי מטופל</h3>
+              <div className="intake-row">
+                <div className="intake-field">
+                  <label>שם</label>
+                  <input type="text" value={editForm.name || ''} onChange={e => setEditForm({...editForm, name: e.target.value})} />
+                </div>
+                <div className="intake-field">
+                  <label>ת.ז.</label>
+                  <input type="text" value={editForm.patID || ''} onChange={e => setEditForm({...editForm, patID: e.target.value})} />
+                </div>
+                <div className="intake-field">
+                  <label>גיל</label>
+                  <input type="number" value={editForm.age || ''} onChange={e => setEditForm({...editForm, age: e.target.value})} />
+                </div>
+              </div>
+              <div className="intake-row">
+                <div className="intake-field">
+                  <label>מין</label>
+                  <select value={editForm.gender || ''} onChange={e => setEditForm({...editForm, gender: e.target.value})}>
+                    <option>בחר</option>
+                    <option>זכר</option>
+                    <option>נקבה</option>
+                    <option>אחר</option>
+                  </select>
+                </div>
+                <div className="intake-field">
+                  <label>אבחנה עיקרית</label>
+                  <input type="text" value={editForm.diag || ''} onChange={e => setEditForm({...editForm, diag: e.target.value})} />
+                </div>
+              </div>
+            </div>
+            <div className="intake-section examiner">
+              <h3>פרטי בודק</h3>
+              <div className="intake-row">
+                <div className="intake-field">
+                  <label>שם הבודק</label>
+                  <input type="text" value={editForm.examName || ''} onChange={e => setEditForm({...editForm, examName: e.target.value})} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="start-btn" style={{width:'auto',padding:'12px 30px'}} onClick={saveEditIntake}>שמור שינויים</button>
+              <button className="back-btn" onClick={() => setShowEditIntake(false)}>ביטול</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {renderContent()}
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
