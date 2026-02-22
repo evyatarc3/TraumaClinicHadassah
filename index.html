@@ -1514,7 +1514,7 @@ function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onCl
         <div className="export-section">
           <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
             <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => setShowResults(!showResults)}>
-              {showResults ? 'הסתר תוצאות' : '🔒 הצג תוצאות (למטפל בלבד)'}
+              {showResults ? 'הסתר תוצאות' : '📊 הצג תוצאות'}
             </button>
           </div>
           {showResults && (
@@ -1619,7 +1619,7 @@ function DESQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, int
         <div className="export-section">
           <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
             <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => setShowResults(!showResults)}>
-              {showResults ? 'הסתר תוצאות' : '🔒 הצג תוצאות (למטפל בלבד)'}
+              {showResults ? 'הסתר תוצאות' : '📊 הצג תוצאות'}
             </button>
           </div>
           {showResults && (
@@ -1694,7 +1694,7 @@ function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, in
         <div className="export-section">
           <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
             <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => setShowResults(!showResults)}>
-              {showResults ? 'הסתר תוצאות' : '🔒 הצג תוצאות (למטפל בלבד)'}
+              {showResults ? 'הסתר תוצאות' : '📊 הצג תוצאות'}
             </button>
           </div>
           {showResults && (
@@ -2070,7 +2070,7 @@ function ColumbiaQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear
           const el = document.getElementById('columbia-risk-display');
           if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }}>
-          🔒 הצג הערכת סיכון (למטפל בלבד)
+          📊 הצג הערכת סיכון
         </button>
         <div id="columbia-risk-display" style={{display:'none'}}>
           <h3>הערכת סיכון</h3>
@@ -2271,7 +2271,7 @@ function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
             const el = document.getElementById('shs-results-display');
             if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
           }}>
-            🔒 הצג תוצאות (למטפל בלבד)
+            📊 הצג תוצאות
           </button>
           <div id="shs-results-display" style={{display:'none'}}>
             {(() => {
