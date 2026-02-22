@@ -2205,69 +2205,143 @@ function DiagnosisView({results, selectedDiags, setSelectedDiags}) {
         )
       })).filter(cat => cat.items.length > 0);
 
+  const toggleDiag = (item) => {
+    if (selectedDiags.some(d => d.code === item.code)) {
+      removeDiag(item.code);
+    } else {
+      addDiag({code: item.code, label: item.label, dsm: item.dsm, source: 'בחירה ידנית'});
+    }
+  };
+
   return (
     <div className="content">
-      <div style={{marginBottom:'20px'}}>
-
-      </div>
-
-      {/* Selected diagnoses */}
-      {selectedDiags.length > 0 && (
-        <div className="section">
-          <h3 className="section-title">אבחנות שנבחרו ({selectedDiags.length})</h3>
-          <div className="selected-diags">
-            {selectedDiags.map((d, i) => (
-              <span key={i} className="diag-tag">
-                {d.code}: {d.label.split(' - ')[0]}
-                {d.source && <span style={{opacity:.7,fontSize:'.85em'}}> ({d.source})</span>}
-                <button onClick={() => removeDiag(d.code)}>x</button>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Suggestions from questionnaires */}
-      {suggestions.length > 0 && (
-        <div className="suggestion-card">
-          <h4>הצעות אבחנה בהתבסס על תוצאות השאלונים</h4>
-          <button className="auto-suggest-btn" onClick={addAllSuggestions}>הוסף את כל ההצעות</button>
-          {suggestions.map((s, i) => (
-            <div key={i} className="suggestion-item">
-              <span className="suggestion-code">{s.code}</span>
-              <span className="suggestion-label">{s.label}</span>
-              <span className="suggestion-source">{s.source}</span>
-              {selectedDiags.some(d => d.code === s.code)
-                ? <button className="add-diag-btn added" disabled>נוסף</button>
-                : <button className="add-diag-btn" onClick={() => addDiag(s)}>הוסף</button>
-              }
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Full F-code browser */}
       <div className="section">
-        <h3 className="section-title">מאגר קודי F (ICD-10)</h3>
-        <input className="diag-search" value={diagSearch} onChange={e => setDiagSearch(e.target.value)}
-          placeholder="חיפוש לפי קוד או תיאור..." />
-        {filteredCodes.map((cat, ci) => (
-          <div key={ci} className="fcode-category">
-            <div className="fcode-cat-title">{cat.category}</div>
-            <div className="fcode-items">
-              {cat.items.map((item, ii) => (
-                <div key={ii} className={`fcode-item ${selectedDiags.some(d => d.code === item.code) ? 'selected' : ''}`}
-                  onClick={() => {
-                    if (selectedDiags.some(d => d.code === item.code)) removeDiag(item.code);
-                    else addDiag({code: item.code, label: item.label, source: 'בחירה ידנית'});
-                  }}>
-                  <span className="diag-code">{item.code}</span>
-                  <span className="diag-desc">{item.label}</span>
+        <h2 className="section-title" style={{borderColor:'#ec4899'}}>🩺 בחירת אבחנות (ICD-10 F-Codes)</h2>
+
+        {/* Selected Diagnoses */}
+        <div style={{background:'#fdf2f8',padding:'16px',borderRadius:'12px',marginBottom:'20px',border:'2px solid #fbcfe8'}}>
+          <h4 style={{margin:'0 0 12px 0',color:'#be185d',display:'flex',alignItems:'center',gap:'8px'}}>
+            <span>אבחנות שנבחרו ({selectedDiags.length})</span>
+            {selectedDiags.length>0&&<span style={{fontSize:'.8em',color:'#9f1239',background:'#fce7f3',padding:'2px 8px',borderRadius:'12px'}}>יופיעו בייצוא לאקסל</span>}
+          </h4>
+          {selectedDiags.length===0?(
+            <span style={{color:'#9ca3af',fontSize:'.9em'}}>לא נבחרו אבחנות. לחץ על אבחנה מהרשימה למטה כדי להוסיף אותה.</span>
+          ):(
+            <div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>
+              {selectedDiags.map(d=>(
+                <div key={d.code} style={{
+                  background:'#fff',border:'2px solid #ec4899',color:'#be185d',
+                  padding:'8px 14px',borderRadius:'20px',fontSize:'.9em',display:'flex',alignItems:'center',gap:'10px',
+                  boxShadow:'0 2px 4px rgba(236,72,153,0.15)'
+                }}>
+                  <strong style={{color:'#9f1239'}}>{d.code}</strong>
+                  <span>{d.label && d.label.includes('-')?d.label.split('-')[1].trim():d.label}</span>
+                  {d.source && <span style={{fontSize:'.75em',color:'#64748b',background:'#f1f5f9',padding:'2px 6px',borderRadius:'4px'}}>{d.source}</span>}
+                  {d.dsm&&<span style={{fontSize:'.75em',color:'#7c3aed',background:'#f3e8ff',padding:'2px 6px',borderRadius:'4px'}}>{d.dsm}</span>}
+                  <button onClick={()=>removeDiag(d.code)} style={{border:'none',background:'#fce7f3',cursor:'pointer',color:'#be185d',fontWeight:'bold',width:'22px',height:'22px',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Suggestions from questionnaires */}
+        {suggestions.length > 0 && (
+          <div style={{background:'#ecfdf5',padding:'16px',borderRadius:'12px',marginBottom:'20px',border:'2px solid #a7f3d0'}}>
+            <h4 style={{margin:'0 0 12px 0',color:'#065f46',display:'flex',alignItems:'center',gap:'8px'}}>
+              <span>💡 הצעות אבחנה בהתבסס על תוצאות השאלונים</span>
+              <button onClick={addAllSuggestions} style={{fontSize:'.8em',padding:'4px 12px',background:'#10b981',color:'#fff',border:'none',borderRadius:'8px',cursor:'pointer',fontFamily:'inherit',fontWeight:'600'}}>הוסף את כל ההצעות</button>
+            </h4>
+            <div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>
+              {suggestions.map((s, i) => (
+                <div key={i} style={{
+                  background:'#fff',border:'2px solid #6ee7b7',color:'#065f46',
+                  padding:'8px 14px',borderRadius:'12px',fontSize:'.85em',display:'flex',alignItems:'center',gap:'8px',
+                  boxShadow:'0 1px 3px rgba(16,185,129,0.15)'
+                }}>
+                  <strong>{s.code}</strong>
+                  <span>{s.label}</span>
+                  <span style={{fontSize:'.75em',color:'#64748b',background:'#f1f5f9',padding:'2px 6px',borderRadius:'4px'}}>{s.source}</span>
+                  {selectedDiags.some(d => d.code === s.code)
+                    ? <span style={{color:'#10b981',fontWeight:'bold'}}>✓ נוסף</span>
+                    : <button onClick={() => addDiag(s)} style={{border:'none',background:'#10b981',color:'#fff',padding:'4px 10px',borderRadius:'6px',cursor:'pointer',fontFamily:'inherit',fontWeight:'600',fontSize:'.85em'}}>הוסף</button>
+                  }
                 </div>
               ))}
             </div>
           </div>
-        ))}
+        )}
+
+        {/* Search Bar */}
+        <div style={{marginBottom:'20px'}}>
+          <label style={{fontWeight:'600',color:'#831843',marginBottom:'8px',display:'block'}}>🔍 חיפוש קוד או שם הפרעה:</label>
+          <input
+            type="text"
+            value={diagSearch}
+            onChange={(e)=>setDiagSearch(e.target.value)}
+            placeholder="למשל: דיכאון, F41, חרדה, ADHD, סכיזופרניה, אוטיזם..."
+            style={{padding:'14px',fontSize:'1.1em',border:'2px solid #f9a8d4',borderRadius:'10px',width:'100%',background:'#fff',fontFamily:'inherit'}}
+          />
+          {diagSearch&&(
+            <div style={{marginTop:'8px',fontSize:'.85em',color:'#64748b'}}>
+              מציג {filteredCodes.reduce((sum,cat)=>sum+cat.items.length,0)} תוצאות
+            </div>
+          )}
+        </div>
+
+        {/* Codes List */}
+        <div style={{maxHeight:'550px',overflowY:'auto',border:'2px solid #f3e8ff',borderRadius:'12px',background:'#faf5ff'}}>
+          {filteredCodes.map((cat,ci)=>(
+            <div key={ci}>
+              <div style={{background:'linear-gradient(135deg,#ec4899,#be185d)',padding:'12px 16px',fontWeight:'bold',color:'#fff',position:'sticky',top:0,zIndex:1,fontSize:'.95em'}}>
+                {cat.category}
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:'1px',background:'#e9d5ff'}}>
+                {cat.items.map(item=>{
+                  const isSelected=selectedDiags.some(d=>d.code===item.code);
+                  return(
+                    <div key={item.code}
+                      onClick={()=>toggleDiag(item)}
+                      style={{
+                        padding:'14px',background:isSelected?'#fce7f3':'#fff',cursor:'pointer',
+                        display:'flex',gap:'12px',alignItems:'center',transition:'all 0.2s',
+                        borderRight:isSelected?'4px solid #ec4899':'4px solid transparent'
+                      }}
+                      onMouseEnter={(e)=>{if(!isSelected)e.currentTarget.style.background='#fdf2f8';}}
+                      onMouseLeave={(e)=>{if(!isSelected)e.currentTarget.style.background='#fff';}}
+                    >
+                      <div style={{
+                        minWidth:'60px',fontWeight:'bold',
+                        color:isSelected?'#be185d':'#6b7280',background:isSelected?'#fce7f3':'#f1f5f9',
+                        padding:'6px',borderRadius:'6px',textAlign:'center',fontSize:'.85em',
+                        border:isSelected?'1px solid #f9a8d4':'1px solid #e5e7eb'
+                      }}>
+                        {item.code}
+                      </div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'.9em',color:isSelected?'#831843':'#1e293b',fontWeight:isSelected?'600':'400'}}>
+                          {item.label.includes('-')?item.label.split('-')[1].trim():item.label}
+                        </div>
+                        <div style={{display:'flex',gap:'8px',marginTop:'2px'}}>
+                          <span style={{fontSize:'.75em',color:'#9ca3af'}}>{item.label.split('-')[0]}</span>
+                          {item.dsm&&<span style={{fontSize:'.7em',color:'#7c3aed',background:'#f3e8ff',padding:'1px 6px',borderRadius:'4px'}}>{item.dsm}</span>}
+                        </div>
+                      </div>
+                      {isSelected&&<div style={{color:'#ec4899',fontWeight:'bold',fontSize:'1.2em'}}>✓</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {filteredCodes.length===0&&(
+            <div style={{padding:'40px',textAlign:'center',color:'#6b7280'}}>
+              <div style={{fontSize:'2em',marginBottom:'10px'}}>🔍</div>
+              <div>לא נמצאו אבחנות תואמות לחיפוש "{diagSearch}"</div>
+              <div style={{fontSize:'.85em',marginTop:'8px'}}>נסה מילות מפתח אחרות או קוד F ספציפי</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
