@@ -1452,24 +1452,39 @@ function BDI2Question({item, idx, selectedValue, onAnswer, isSkipped}) {
   );
 }
 
-function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onClear}) {
+function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onClear, intake}) {
   const ansCount = Object.values(answers).filter(v => v !== null && v !== undefined && v !== '').length;
   const allAnswered = ansCount === q.items.length;
   const scoringResult = allAnswered && q.scoring ? q.scoring(answers) : null;
   const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+  const [showResults, setShowResults] = useState(false);
+  const hasAutoExported = React.useRef(false);
+
+  React.useEffect(() => {
+    if (allAnswered && scoringResult && !hasAutoExported.current) {
+      hasAutoExported.current = true;
+      onAddResults(q.name, q.fullName, scoringResult, {...answers});
+      try {
+        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+        const dateStr = new Date().toISOString().slice(0,10);
+        exportQuestionnaireExcel(q, answers, scoringResult, `${patName}_${q.name}_${dateStr}.xlsx`);
+      } catch(e) { console.error('Auto-export error:', e); }
+    }
+  }, [allAnswered]);
+
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; setShowResults(false); onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{q.fullName}</h3>
       <div style={{marginBottom:'20px'}}>{q.description}</div>
       {q.hasCriterionA && (
         <div className="section" style={{marginBottom:'20px',background:'#f8fafc',padding:'16px',borderRadius:'10px'}}>
           <h4 style={{color:'#1e3a5f',marginBottom:'8px',fontSize:'.95em'}}>קריטריון A - תיאור האירוע הטראומטי</h4>
-          <textarea className="crit-a-text" placeholder="תאר/י בקצרה את האירוע הטראומטי..." 
-            value={answers['criterionA'] || ''} 
+          <textarea className="crit-a-text" placeholder="תאר/י בקצרה את האירוע הטראומטי..."
+            value={answers['criterionA'] || ''}
             onChange={(e) => onAnswer('criterionA', e.target.value)} />
           <div className="crit-a-options" style={{marginTop:'10px'}}>
             <span style={{fontWeight:'600',color:'#475569',fontSize:'.85em',marginLeft:'8px'}}>סוג חשיפה:</span>
@@ -1497,41 +1512,168 @@ function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onCl
       </div>
       {allAnswered && scoringResult && (
         <div className="export-section">
-          <h3>תוצאות השאלון</h3>
-          <div className="result-summary">
-            <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
-            <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
-            {scoringResult.subdomains && scoringResult.subdomains.length > 1 && (
-              <div className="subdomain" style={{marginTop:'16px',textAlign:'right'}}>
-                {scoringResult.subdomains.map((sub, si) => (
-                  <div key={si} className="subdomain-row">
-                    <span className="subdomain-label">{sub.name}</span>
-                    <div className="bar-bg"><div className="bar-fill high" style={{width:(sub.score/sub.max*100)+'%',background:'#3b82f6'}}></div></div>
-                    <span className="subdomain-val">{sub.score}/{sub.max}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
+            <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => setShowResults(!showResults)}>
+              {showResults ? 'הסתר תוצאות' : '🔒 הצג תוצאות (למטפל בלבד)'}
+            </button>
           </div>
-          <button className="export-btn" onClick={() => exportQuestionnaire(q.name, answers, scoringResult)}>הורד תוצאות (טקסט)</button>
-          <button className="export-btn" onClick={() => exportQuestionnaireExcel(q, answers, scoringResult)}>ייצוא לאקסל</button>
-          <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(q.name, q.fullName, scoringResult, {...answers})}>הוסף לתוצאות</button>
+          {showResults && (
+            <div className="result-summary">
+              <h3>תוצאות השאלון</h3>
+              <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+              <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+              {scoringResult.subdomains && scoringResult.subdomains.length > 1 && (
+                <div className="subdomain" style={{marginTop:'16px',textAlign:'right'}}>
+                  {scoringResult.subdomains.map((sub, si) => (
+                    <div key={si} className="subdomain-row">
+                      <span className="subdomain-label">{sub.name}</span>
+                      <div className="bar-bg"><div className="bar-fill high" style={{width:(sub.score/sub.max*100)+'%',background:'#3b82f6'}}></div></div>
+                      <span className="subdomain-val">{sub.score}/{sub.max}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em',marginTop:'10px'}}>
+            ✅ השאלון הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד.
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+function DESQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, intake}) {
   const ansCount = Object.values(answers).filter(v => v !== null && v !== undefined && v !== '').length;
-  const allAnswered = ansCount === BDI2.items.length;
-  const scoringResult = allAnswered ? BDI2.scoring(answers) : null;
-  const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+  const allAnswered = ansCount === DES.items.length;
+  const scoringResult = allAnswered ? DES.scoring(answers) : null;
+  const [showResults, setShowResults] = useState(false);
+  const hasAutoExported = React.useRef(false);
+
+  React.useEffect(() => {
+    if (allAnswered && scoringResult && !hasAutoExported.current) {
+      hasAutoExported.current = true;
+      onAddResults(DES.name, DES.fullName, scoringResult, {...answers});
+      try {
+        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+        const dateStr = new Date().toISOString().slice(0,10);
+        const rows = [['שאלון', DES.fullName],[''],['ציון כולל (ממוצע)', scoringResult.total],['מקסימום', scoringResult.max],['רמת חומרה', scoringResult.severity],['']];
+        if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
+          rows.push(['תת-תחומים']);
+          rows.push(['תת-תחום', 'ציון', 'מקסימום']);
+          scoringResult.subdomains.forEach(sub => rows.push([sub.name, sub.score, sub.max]));
+          rows.push(['']);
+        }
+        rows.push(['תשובות']);
+        rows.push(['מספר', 'שאלה', 'אחוז זמן (0-100)']);
+        DES.items.forEach((item, idx) => {
+          rows.push([idx + 1, item, answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '']);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'DES');
+        XLSX.writeFile(wb, `${patName}_DES_${dateStr}.xlsx`);
+      } catch(e) { console.error('Auto-export error:', e); }
+    }
+  }, [allAnswered]);
+
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; setShowResults(false); onClear(); } }}>נקה שאלון</button>
+      </div>
+      <h3 className="section-title">{DES.fullName}</h3>
+      <div style={{marginBottom:'20px'}}>{DES.description}</div>
+      <div className="progress-text">
+        <span>ענו: {ansCount} / {DES.items.length}</span>
+        <span>{Math.round(ansCount/DES.items.length*100)}%</span>
+      </div>
+      <div className="progress-wrap">
+        <div className="progress-fill high" style={{width: (ansCount/DES.items.length*100) + '%'}}></div>
+      </div>
+      <div style={{marginTop:'20px'}}>
+        {DES.items.map((item, idx) => {
+          const val = answers[idx] !== null && answers[idx] !== undefined && answers[idx] !== '' ? parseInt(answers[idx]) : null;
+          const isAnswered = val !== null;
+          return (
+            <div key={idx} className={`q-item ${isAnswered ? 'answered' : ''}`}>
+              <div className="q-text">{item}<span className="q-num">{idx+1}</span></div>
+              <div className="slider-row">
+                <span style={{fontSize:'.85em',color:'#64748b',minWidth:'30px'}}>0%</span>
+                <input type="range" min="0" max="100" step="10" value={val !== null ? val : 0}
+                  onChange={(e) => onAnswer(idx, parseInt(e.target.value))}
+                  style={{flex:1,accentColor:'#3b82f6'}} />
+                <span style={{fontSize:'.85em',color:'#64748b',minWidth:'40px'}}>100%</span>
+                <div className="slider-val">{val !== null ? val + '%' : '-'}</div>
+              </div>
+              {isAnswered && (
+                <button className="deselect-btn" style={{marginTop:'6px'}} onClick={() => onAnswer(idx, null)}>ביטול</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {allAnswered && scoringResult && (
+        <div className="export-section">
+          <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
+            <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => setShowResults(!showResults)}>
+              {showResults ? 'הסתר תוצאות' : '🔒 הצג תוצאות (למטפל בלבד)'}
+            </button>
+          </div>
+          {showResults && (
+            <div className="result-summary">
+              <h3>תוצאות השאלון</h3>
+              <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+              <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+              {scoringResult.subdomains && scoringResult.subdomains.length > 1 && (
+                <div className="subdomain" style={{marginTop:'16px',textAlign:'right'}}>
+                  {scoringResult.subdomains.map((sub, si) => (
+                    <div key={si} className="subdomain-row">
+                      <span className="subdomain-label">{sub.name}</span>
+                      <div className="bar-bg"><div className="bar-fill high" style={{width:(sub.score/sub.max*100)+'%',background:'#3b82f6'}}></div></div>
+                      <span className="subdomain-val">{sub.score}/{sub.max}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em',marginTop:'10px'}}>
+            ✅ השאלון הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, intake}) {
+  const ansCount = Object.values(answers).filter(v => v !== null && v !== undefined && v !== '').length;
+  const allAnswered = ansCount === BDI2.items.length;
+  const scoringResult = allAnswered ? BDI2.scoring(answers) : null;
+  const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+  const [showResults, setShowResults] = useState(false);
+  const hasAutoExported = React.useRef(false);
+
+  React.useEffect(() => {
+    if (allAnswered && scoringResult && !hasAutoExported.current) {
+      hasAutoExported.current = true;
+      onAddResults(BDI2.name, BDI2.fullName, scoringResult, {...answers});
+      try {
+        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+        const dateStr = new Date().toISOString().slice(0,10);
+        exportQuestionnaireExcel(BDI2, answers, scoringResult, `${patName}_BDI-II_${dateStr}.xlsx`);
+      } catch(e) { console.error('Auto-export error:', e); }
+    }
+  }, [allAnswered]);
+
+  return (
+    <div className="section">
+      <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
+        <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; setShowResults(false); onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{BDI2.fullName}</h3>
       <div style={{marginBottom:'20px'}}>{BDI2.description}</div>
@@ -1550,14 +1692,21 @@ function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
       </div>
       {allAnswered && scoringResult && (
         <div className="export-section">
-          <h3>תוצאות השאלון</h3>
-          <div className="result-summary">
-            <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
-            <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+          <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
+            <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => setShowResults(!showResults)}>
+              {showResults ? 'הסתר תוצאות' : '🔒 הצג תוצאות (למטפל בלבד)'}
+            </button>
           </div>
-          <button className="export-btn" onClick={() => exportQuestionnaire(BDI2.name, answers, scoringResult)}>הורד תוצאות (טקסט)</button>
-          <button className="export-btn" onClick={() => exportQuestionnaireExcel(BDI2, answers, scoringResult)}>ייצוא לאקסל</button>
-          <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(BDI2.name, BDI2.fullName, scoringResult, {...answers})}>הוסף לתוצאות</button>
+          {showResults && (
+            <div className="result-summary">
+              <h3>תוצאות השאלון</h3>
+              <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+              <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+            </div>
+          )}
+          <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em',marginTop:'10px'}}>
+            ✅ השאלון הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד.
+          </div>
         </div>
       )}
     </div>
@@ -1915,18 +2064,26 @@ function ColumbiaQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear
         )}
       </div>
 
-      {/* Risk Summary */}
+      {/* Risk Summary - hidden until clinician clicks */}
       <div className="export-section">
-        <h3>הערכת סיכון</h3>
-        <div className="result-summary">
-          <div className={'risk-badge ' + risk.cls}>{risk.level}</div>
-        </div>
-        {hasAnyIdeation && (
-          <div style={{margin:'10px 0',fontSize:'.88em',color:'#475569'}}>
-            <div>סוג הרהור חמור ביותר: <strong>{highestIdeation()}</strong></div>
-            <div>סה"כ ציון עוצמה: <strong>{COLUMBIA.intensityItems.reduce((s, _, i) => s + (parseInt(answers['intensity_' + i]) || 0), 0)}/25</strong></div>
+        <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)',marginBottom:'12px'}} onClick={() => {
+          const el = document.getElementById('columbia-risk-display');
+          if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }}>
+          🔒 הצג הערכת סיכון (למטפל בלבד)
+        </button>
+        <div id="columbia-risk-display" style={{display:'none'}}>
+          <h3>הערכת סיכון</h3>
+          <div className="result-summary">
+            <div className={'risk-badge ' + risk.cls}>{risk.level}</div>
           </div>
-        )}
+          {hasAnyIdeation && (
+            <div style={{margin:'10px 0',fontSize:'.88em',color:'#475569'}}>
+              <div>סוג הרהור חמור ביותר: <strong>{highestIdeation()}</strong></div>
+              <div>סה"כ ציון עוצמה: <strong>{COLUMBIA.intensityItems.reduce((s, _, i) => s + (parseInt(answers['intensity_' + i]) || 0), 0)}/25</strong></div>
+            </div>
+          )}
+        </div>
         <button className="export-btn" onClick={() => exportQuestionnaire(COLUMBIA.name, answers, {total: ansTotal, max: totalMainItems, severity: risk.level})}>הורד תוצאות (טקסט)</button>
         <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(COLUMBIA.name, COLUMBIA.fullName, {total: ansTotal, max: totalMainItems, severity: risk.level, cls: risk.cls.replace('risk-','sev-')}, {...answers})}>הוסף לתוצאות</button>
       </div>
@@ -2108,23 +2265,36 @@ function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
         </div>
       ))}
 
-      <div className="export-section">
-        <h3>תוצאות</h3>
-        {answeredCount === items.length && (() => {
-          const results = SHS.scoring(answers);
-          return (
-            <div className="result-summary">
-              <div className="score-display">{results.total} / {results.max}</div>
-              <div className={'severity-badge ' + results.cls}>{results.severity}</div>
-              <div style={{fontSize:'.82em',color:'#64748b',marginTop:'8px'}}>ציון ממוצע (פריט 4 הפוך)</div>
-            </div>
-          );
-        })()}
-        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)',marginTop:'10px'}} onClick={() => {
-          const results = SHS.scoring(answers);
-          onAddResults(SHS.name, SHS.fullName, results, {...answers});
-        }}>הוסף לתוצאות</button>
-      </div>
+      {answeredCount === items.length && (
+        <div className="export-section">
+          <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)',marginBottom:'12px'}} onClick={() => {
+            const el = document.getElementById('shs-results-display');
+            if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+          }}>
+            🔒 הצג תוצאות (למטפל בלבד)
+          </button>
+          <div id="shs-results-display" style={{display:'none'}}>
+            {(() => {
+              const results = SHS.scoring(answers);
+              return (
+                <div className="result-summary">
+                  <h3>תוצאות</h3>
+                  <div className="score-display">{results.total} / {results.max}</div>
+                  <div className={'severity-badge ' + results.cls}>{results.severity}</div>
+                  <div style={{fontSize:'.82em',color:'#64748b',marginTop:'8px'}}>ציון ממוצע (פריט 4 הפוך)</div>
+                </div>
+              );
+            })()}
+          </div>
+          <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)',marginTop:'10px'}} onClick={() => {
+            const results = SHS.scoring(answers);
+            onAddResults(SHS.name, SHS.fullName, results, {...answers});
+          }}>הוסף לתוצאות</button>
+          <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em',marginTop:'10px'}}>
+            ✅ השאלון הושלם.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2550,7 +2720,7 @@ function exportFullDetailedExcel(data) {
   XLSX.writeFile(wb, 'results_detailed.xlsx');
 }
 
-function exportQuestionnaireExcel(q, answers, scoringResult) {
+function exportQuestionnaireExcel(q, answers, scoringResult, customFilename) {
   const rows = [['שאלון', q.fullName],[''],['ציון כולל', scoringResult.total],['מקסימום', scoringResult.max],['רמת חומרה', scoringResult.severity],['']];
   if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
     rows.push(['תת-תחומים']);
@@ -2569,7 +2739,7 @@ function exportQuestionnaireExcel(q, answers, scoringResult) {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, q.name);
-  XLSX.writeFile(wb, `${q.name}_results.xlsx`);
+  XLSX.writeFile(wb, customFilename || `${q.name}_results.xlsx`);
 }
 
 // ==================== MAIN APP ====================
@@ -2597,6 +2767,47 @@ function App() {
     setResults(prev => ({...prev, [qName]: {qname: qFullName, results: scoringResult, answers: qAnswers || {}, questionnaire: qObj}}));
     setCompletedQ(prev => ({...prev, [qName]: true}));
   };
+
+  // === AUTO-SAVE TO LOCALSTORAGE ===
+  React.useEffect(() => {
+    if (!intake) return; // Don't save before intake is set
+    try {
+      const saveData = {
+        intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('hadassah_trauma_session', JSON.stringify(saveData));
+    } catch(e) { console.error('Auto-save error:', e); }
+  }, [intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags]);
+
+  // === AUTO-RESTORE FROM LOCALSTORAGE ON LOAD ===
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('hadassah_trauma_session');
+      if (saved) {
+        const data = JSON.parse(saved);
+        const hoursSinceLastSave = (Date.now() - (data.timestamp || 0)) / (1000 * 60 * 60);
+        if (hoursSinceLastSave < 24 && data.intake) {
+          if (confirm(`נמצאו נתונים שנשמרו עבור "${data.intake.name}" (${Math.round(hoursSinceLastSave * 60)} דקות).\nהאם לשחזר?`)) {
+            if (data.intake) setIntake(data.intake);
+            if (data.sessions) setSessions(data.sessions);
+            if (data.currentSession) setCurrentSession(data.currentSession);
+            if (data.results) setResults(data.results);
+            if (data.completedQ) setCompletedQ(data.completedQ);
+            if (data.answers) setAnswers(data.answers);
+            if (data.selectedQ) setSelectedQ(data.selectedQ);
+            if (data.activeView) setActiveView(data.activeView);
+            if (data.selectedDiags) setSelectedDiags(data.selectedDiags);
+            setIsLoggedIn(true);
+          } else {
+            localStorage.removeItem('hadassah_trauma_session');
+          }
+        } else if (hoursSinceLastSave >= 24) {
+          localStorage.removeItem('hadassah_trauma_session');
+        }
+      }
+    } catch(e) { console.error('Auto-restore error:', e); }
+  }, []);
 
   const saveBackup = () => {
     const backup = {intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags};
@@ -2648,6 +2859,7 @@ function App() {
       setResults({});
       setCompletedQ({});
       setSelectedDiags([]);
+      try { localStorage.removeItem('hadassah_trauma_session'); } catch(e) {}
     }
   };
 
@@ -2786,7 +2998,7 @@ function App() {
     if (qName && q) {
       if (q.name === 'BDI-II') {
         return (
-          <BDI2Questionnaire answers={answers} onAnswer={(idx, val) => {
+          <BDI2Questionnaire answers={answers} intake={intake} onAnswer={(idx, val) => {
             const newAns = {...answers}; newAns[idx] = val; setAnswers(newAns);
             if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === BDI2.items.length) {
               setCompletedQ(prev => ({...prev, [BDI2.name]: true}));
@@ -2815,8 +3027,18 @@ function App() {
           }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
         );
       }
+      if (q.name === 'DES') {
+        return (
+          <DESQuestionnaire answers={answers} onAnswer={(idx, val) => {
+            const newAns = {...answers}; newAns[idx] = val; setAnswers(newAns);
+            if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === DES.items.length) {
+              setCompletedQ(prev => ({...prev, [DES.name]: true}));
+            }
+          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} intake={intake} />
+        );
+      }
       return (
-        <StandardQuestionnaire q={q} answers={answers} onAnswer={(idx, val) => {
+        <StandardQuestionnaire q={q} answers={answers} intake={intake} onAnswer={(idx, val) => {
           const newAns = {...answers}; newAns[idx] = val; setAnswers(newAns);
           if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === q.items.length) {
             setCompletedQ(prev => ({...prev, [q.name]: true}));
