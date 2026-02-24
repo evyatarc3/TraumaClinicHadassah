@@ -7,7 +7,7 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1558,19 +1558,33 @@ function DESQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, int
       try {
         const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
         const dateStr = new Date().toISOString().slice(0,10);
-        const rows = [['שאלון', DES.fullName],[''],['ציון כולל (ממוצע)', scoringResult.total],['מקסימום', scoringResult.max],['רמת חומרה', scoringResult.severity],['']];
+        const rows = [];
+        rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+        rows.push([{v:DES.fullName,s:XS.subtitle}]);
+        rows.push(['']);
+        rows.push([{v:'ציון כולל (ממוצע)',s:XS.labelCell},{v:scoringResult.total,s:XS.valueCell}]);
+        rows.push([{v:'מקסימום',s:XS.labelCell},{v:scoringResult.max,s:XS.valueCell}]);
+        rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
+        rows.push(['']);
         if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
-          rows.push(['תת-תחומים']);
-          rows.push(['תת-תחום', 'ציון', 'מקסימום']);
-          scoringResult.subdomains.forEach(sub => rows.push([sub.name, sub.score, sub.max]));
+          rows.push([{v:'תת-תחומים',s:XS.sectionHeader}]);
+          rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow}]);
+          let si = 0;
+          scoringResult.subdomains.forEach(sub => {
+            const rs = si%2===0?XS.evenRow:XS.oddRow; const rc = si%2===0?XS.evenRowCenter:XS.oddRowCenter;
+            rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc}]); si++;
+          });
           rows.push(['']);
         }
-        rows.push(['תשובות']);
-        rows.push(['מספר', 'שאלה', 'אחוז זמן (0-100)']);
+        rows.push([{v:'תשובות',s:XS.sectionHeader}]);
+        rows.push([{v:'מספר',s:XS.headerRow},{v:'שאלה',s:XS.headerRowRight},{v:'אחוז זמן (0-100)',s:XS.headerRow}]);
         DES.items.forEach((item, idx) => {
-          rows.push([idx + 1, item, answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '']);
+          const rs = idx%2===0?XS.evenRow:XS.oddRow; const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
+          rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '',s:rc}]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
+        styleSheet(ws, [8, 50, 18]);
+        ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'DES');
         XLSX.writeFile(wb, `${patName}_DES_${dateStr}.xlsx`);
@@ -2642,6 +2656,29 @@ function SessionManager({sessions, currentSession, onSelectSession, onAddSession
   );
 }
 
+// ==================== EXPORT STYLING HELPERS ====================
+
+const XS = {
+  title: {font:{bold:true,sz:16,color:{rgb:'1E3A5F'}},fill:{fgColor:{rgb:'E8F0FE'}},alignment:{horizontal:'right',vertical:'center'},border:{bottom:{style:'medium',color:{rgb:'3B82F6'}}}},
+  subtitle: {font:{bold:true,sz:12,color:{rgb:'475569'}},fill:{fgColor:{rgb:'F1F5F9'}},alignment:{horizontal:'right',vertical:'center'}},
+  headerRow: {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'3B82F6'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'1E40AF'}},top:{style:'thin',color:{rgb:'1E40AF'}},left:{style:'thin',color:{rgb:'DBEAFE'}},right:{style:'thin',color:{rgb:'DBEAFE'}}}},
+  headerRowRight: {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'3B82F6'}},alignment:{horizontal:'right',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'1E40AF'}},top:{style:'thin',color:{rgb:'1E40AF'}},left:{style:'thin',color:{rgb:'DBEAFE'}},right:{style:'thin',color:{rgb:'DBEAFE'}}}},
+  labelCell: {font:{bold:true,sz:11,color:{rgb:'1E293B'}},fill:{fgColor:{rgb:'EFF6FF'}},alignment:{horizontal:'right',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}},right:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  valueCell: {font:{sz:11,color:{rgb:'334155'}},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}},left:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  valueCellRight: {font:{sz:11,color:{rgb:'334155'}},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'right',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}},left:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  evenRow: {font:{sz:10,color:{rgb:'334155'}},fill:{fgColor:{rgb:'F8FAFC'}},alignment:{horizontal:'right',vertical:'center',wrapText:true},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  oddRow: {font:{sz:10,color:{rgb:'334155'}},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'right',vertical:'center',wrapText:true},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  evenRowCenter: {font:{sz:10,color:{rgb:'334155'}},fill:{fgColor:{rgb:'F8FAFC'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  oddRowCenter: {font:{sz:10,color:{rgb:'334155'}},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}},
+  sectionHeader: {font:{bold:true,sz:12,color:{rgb:'7C3AED'}},fill:{fgColor:{rgb:'F5F3FF'}},alignment:{horizontal:'right',vertical:'center'},border:{bottom:{style:'medium',color:{rgb:'7C3AED'}}}},
+  severity: {font:{bold:true,sz:12,color:{rgb:'DC2626'}},fill:{fgColor:{rgb:'FEF2F2'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'FECACA'}}}},
+};
+
+function styleSheet(ws, colWidths) {
+  ws['!cols'] = colWidths.map(w => ({wch: w}));
+  if (!ws['!rows']) ws['!rows'] = [];
+}
+
 // ==================== EXPORT FUNCTIONS ====================
 
 function exportQuestionnaire(name, answers, results) {
@@ -2656,13 +2693,23 @@ function exportQuestionnaire(name, answers, results) {
 }
 
 function exportSummaryExcel(data) {
-  const rows = [['מרפאת הטראומה - הדסה'],['סיכום תוצאות שאלונים'],[''],['שאלון', 'ציון כולל', 'מקסימום', 'רמת חומרה']];
+  const rows = [];
+  rows.push([{v:'מרפאת הטראומה - הדסה', s:XS.title}]);
+  rows.push([{v:'סיכום תוצאות שאלונים', s:XS.subtitle}]);
+  rows.push(['']);
+  rows.push([{v:'שאלון',s:XS.headerRowRight},{v:'ציון כולל',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow},{v:'רמת חומרה',s:XS.headerRow}]);
+  let ri = 0;
   Object.entries(data).forEach(([k, result]) => {
     if(result.results) {
-      rows.push([result.qname, result.results.total, result.results.max, result.results.severity]);
+      const rs = ri % 2 === 0 ? XS.evenRow : XS.oddRow;
+      const rc = ri % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
+      rows.push([{v:result.qname,s:rs},{v:result.results.total,s:rc},{v:result.results.max,s:rc},{v:result.results.severity,s:rs}]);
+      ri++;
     }
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
+  styleSheet(ws, [40, 14, 14, 25]);
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Summary');
   XLSX.writeFile(wb, 'summary.xlsx');
@@ -2671,29 +2718,49 @@ function exportSummaryExcel(data) {
 function exportFullDetailedExcel(data) {
   const wb = XLSX.utils.book_new();
   // Summary sheet
-  const summaryRows = [['מרפאת הטראומה - הדסה'],['דו"ח מפורט - תוצאות שאלונים'],[''],['שאלון', 'ציון כולל', 'מקסימום', 'רמת חומרה']];
+  const summaryRows = [];
+  summaryRows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+  summaryRows.push([{v:'דו"ח מפורט - תוצאות שאלונים',s:XS.subtitle}]);
+  summaryRows.push(['']);
+  summaryRows.push([{v:'שאלון',s:XS.headerRowRight},{v:'ציון כולל',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow},{v:'רמת חומרה',s:XS.headerRow}]);
+  let ri = 0;
   Object.entries(data).forEach(([k, result]) => {
     if(result.results) {
-      summaryRows.push([result.qname, result.results.total, result.results.max, result.results.severity]);
+      const rs = ri % 2 === 0 ? XS.evenRow : XS.oddRow;
+      const rc = ri % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
+      summaryRows.push([{v:result.qname,s:rs},{v:result.results.total,s:rc},{v:result.results.max,s:rc},{v:result.results.severity,s:rs}]);
+      ri++;
     }
   });
   const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+  styleSheet(summaryWs, [40, 14, 14, 25]);
+  summaryWs['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
   XLSX.utils.book_append_sheet(wb, summaryWs, 'סיכום');
 
   // Per-questionnaire sheets with full Q&A
   Object.entries(data).forEach(([key, result]) => {
     if(result.results) {
-      const rows = [['שאלון', result.qname],['ציון כולל', result.results.total],['מקסימום', result.results.max],['רמת חומרה', result.results.severity],['']];
+      const rows = [];
+      rows.push([{v:'שאלון',s:XS.labelCell},{v:result.qname,s:XS.valueCellRight}]);
+      rows.push([{v:'ציון כולל',s:XS.labelCell},{v:result.results.total,s:XS.valueCell}]);
+      rows.push([{v:'מקסימום',s:XS.labelCell},{v:result.results.max,s:XS.valueCell}]);
+      rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:result.results.severity,s:XS.severity}]);
+      rows.push(['']);
       if(result.results.subdomains && result.results.subdomains.length > 1) {
-        rows.push(['תת-תחומים']);
-        rows.push(['תת-תחום', 'ציון', 'מקסימום']);
-        result.results.subdomains.filter(sub => sub.name).forEach(sub => rows.push([sub.name, sub.score, sub.max]));
+        rows.push([{v:'תת-תחומים',s:XS.sectionHeader}]);
+        rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow}]);
+        let si = 0;
+        result.results.subdomains.filter(sub => sub.name).forEach(sub => {
+          const rs = si % 2 === 0 ? XS.evenRow : XS.oddRow;
+          const rc = si % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
+          rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc}]);
+          si++;
+        });
         rows.push(['']);
       }
-      // Add full questions and answers
       if(result.answers && result.questionnaire && result.questionnaire.items) {
-        rows.push(['שאלות ותשובות']);
-        rows.push(['מספר', 'שאלה', 'ערך תשובה', 'טקסט תשובה']);
+        rows.push([{v:'שאלות ותשובות',s:XS.sectionHeader}]);
+        rows.push([{v:'מספר',s:XS.headerRow},{v:'שאלה',s:XS.headerRowRight},{v:'ערך',s:XS.headerRow},{v:'תשובה',s:XS.headerRowRight}]);
         const q = result.questionnaire;
         q.items.forEach((item, idx) => {
           const qText = typeof item === 'string' ? item : item.q;
@@ -2710,10 +2777,13 @@ function exportFullDetailedExcel(data) {
               ansText = ansVal === '1' ? 'כן' : ansVal === '0' ? 'לא' : String(ansVal);
             }
           }
-          rows.push([idx + 1, qText, ansVal !== null && ansVal !== undefined ? ansVal : '', ansText]);
+          const rs = idx % 2 === 0 ? XS.evenRow : XS.oddRow;
+          const rc = idx % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
+          rows.push([{v:idx+1,s:rc},{v:qText,s:rs},{v:ansVal !== null && ansVal !== undefined ? ansVal : '',s:rc},{v:ansText,s:rs}]);
         });
       }
       const ws = XLSX.utils.aoa_to_sheet(rows);
+      styleSheet(ws, [8, 50, 10, 30]);
       XLSX.utils.book_append_sheet(wb, ws, key.substring(0,31));
     }
   });
@@ -2721,22 +2791,39 @@ function exportFullDetailedExcel(data) {
 }
 
 function exportQuestionnaireExcel(q, answers, scoringResult, customFilename) {
-  const rows = [['שאלון', q.fullName],[''],['ציון כולל', scoringResult.total],['מקסימום', scoringResult.max],['רמת חומרה', scoringResult.severity],['']];
+  const rows = [];
+  rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+  rows.push([{v:q.fullName,s:XS.subtitle}]);
+  rows.push(['']);
+  rows.push([{v:'ציון כולל',s:XS.labelCell},{v:scoringResult.total,s:XS.valueCell}]);
+  rows.push([{v:'מקסימום',s:XS.labelCell},{v:scoringResult.max,s:XS.valueCell}]);
+  rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
+  rows.push(['']);
   if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
-    rows.push(['תת-תחומים']);
-    rows.push(['תת-תחום', 'ציון', 'מקסימום']);
-    scoringResult.subdomains.forEach(sub => rows.push([sub.name, sub.score, sub.max]));
+    rows.push([{v:'תת-תחומים',s:XS.sectionHeader}]);
+    rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow}]);
+    let si = 0;
+    scoringResult.subdomains.forEach(sub => {
+      const rs = si % 2 === 0 ? XS.evenRow : XS.oddRow;
+      const rc = si % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
+      rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc}]);
+      si++;
+    });
     rows.push(['']);
   }
-  rows.push(['תשובות']);
-  rows.push(['שאלה', 'תשובה']);
+  rows.push([{v:'תשובות',s:XS.sectionHeader}]);
+  rows.push([{v:'שאלה',s:XS.headerRowRight},{v:'תשובה',s:XS.headerRow}]);
   if(q.items) {
     q.items.forEach((item, idx) => {
       const qText = typeof item === 'string' ? item : item.q;
-      rows.push([qText, answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '']);
+      const rs = idx % 2 === 0 ? XS.evenRow : XS.oddRow;
+      const rc = idx % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
+      rows.push([{v:qText,s:rs},{v:answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '',s:rc}]);
     });
   }
   const ws = XLSX.utils.aoa_to_sheet(rows);
+  styleSheet(ws, [50, 15, 15]);
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, q.name);
   XLSX.writeFile(wb, customFilename || `${q.name}_results.xlsx`);
@@ -2752,6 +2839,7 @@ function App() {
   const [activeView, setActiveView] = useState('bigmenu');
   const [selectedQ, setSelectedQ] = useState(null);
   const [answers, setAnswers] = useState({});
+  const [allQAnswers, setAllQAnswers] = useState({}); // stores answers per questionnaire
   const [results, setResults] = useState({});
   const [completedQ, setCompletedQ] = useState({});
   const [user, setUser] = useState('');
@@ -2773,14 +2861,44 @@ function App() {
     if (!intake) return; // Don't save before intake is set
     try {
       const saveData = {
-        intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags,
+        intake, sessions, currentSession, results, completedQ, answers, allQAnswers, selectedQ, activeView, selectedDiags,
         timestamp: Date.now()
       };
       localStorage.setItem('hadassah_trauma_session', JSON.stringify(saveData));
     } catch(e) { console.error('Auto-save error:', e); }
-  }, [intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags]);
+  }, [intake, sessions, currentSession, results, completedQ, answers, allQAnswers, selectedQ, activeView, selectedDiags]);
 
-  // === AUTO-RESTORE FROM LOCALSTORAGE ON LOAD ===
+  // === RESTORE FROM LOCALSTORAGE ===
+  const restoreFromLocalStorage = () => {
+    try {
+      const saved = localStorage.getItem('hadassah_trauma_session');
+      if (!saved) { alert('אין נתונים שמורים לשחזור.'); return; }
+      const data = JSON.parse(saved);
+      const hoursSinceLastSave = (Date.now() - (data.timestamp || 0)) / (1000 * 60 * 60);
+      if (hoursSinceLastSave >= 24) {
+        localStorage.removeItem('hadassah_trauma_session');
+        alert('הנתונים השמורים פגו תוקף (מעל 24 שעות).');
+        return;
+      }
+      if (!data.intake) { alert('לא נמצאו נתוני מטופל לשחזור.'); return; }
+      const minAgo = Math.round(hoursSinceLastSave * 60);
+      if (confirm(`לשחזר נתונים עבור "${data.intake.name}" (נשמרו לפני ${minAgo} דקות)?`)) {
+        if (data.intake) setIntake(data.intake);
+        if (data.sessions) setSessions(data.sessions);
+        if (data.currentSession) setCurrentSession(data.currentSession);
+        if (data.results) setResults(data.results);
+        if (data.completedQ) setCompletedQ(data.completedQ);
+        if (data.answers) setAnswers(data.answers);
+        if (data.allQAnswers) setAllQAnswers(data.allQAnswers);
+        if (data.selectedQ) setSelectedQ(data.selectedQ);
+        if (data.activeView) setActiveView(data.activeView);
+        if (data.selectedDiags) setSelectedDiags(data.selectedDiags);
+        setIsLoggedIn(true);
+      }
+    } catch(e) { console.error('Restore error:', e); alert('שגיאה בשחזור הנתונים.'); }
+  };
+
+  // Auto-restore on page load
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem('hadassah_trauma_session');
@@ -2788,20 +2906,7 @@ function App() {
         const data = JSON.parse(saved);
         const hoursSinceLastSave = (Date.now() - (data.timestamp || 0)) / (1000 * 60 * 60);
         if (hoursSinceLastSave < 24 && data.intake) {
-          if (confirm(`נמצאו נתונים שנשמרו עבור "${data.intake.name}" (${Math.round(hoursSinceLastSave * 60)} דקות).\nהאם לשחזר?`)) {
-            if (data.intake) setIntake(data.intake);
-            if (data.sessions) setSessions(data.sessions);
-            if (data.currentSession) setCurrentSession(data.currentSession);
-            if (data.results) setResults(data.results);
-            if (data.completedQ) setCompletedQ(data.completedQ);
-            if (data.answers) setAnswers(data.answers);
-            if (data.selectedQ) setSelectedQ(data.selectedQ);
-            if (data.activeView) setActiveView(data.activeView);
-            if (data.selectedDiags) setSelectedDiags(data.selectedDiags);
-            setIsLoggedIn(true);
-          } else {
-            localStorage.removeItem('hadassah_trauma_session');
-          }
+          restoreFromLocalStorage();
         } else if (hoursSinceLastSave >= 24) {
           localStorage.removeItem('hadassah_trauma_session');
         }
@@ -2810,7 +2915,7 @@ function App() {
   }, []);
 
   const saveBackup = () => {
-    const backup = {intake, sessions, currentSession, results, completedQ, answers, selectedQ, activeView, selectedDiags};
+    const backup = {intake, sessions, currentSession, results, completedQ, answers, allQAnswers, selectedQ, activeView, selectedDiags};
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2837,6 +2942,7 @@ function App() {
           if (data.results) setResults(data.results);
           if (data.completedQ) setCompletedQ(data.completedQ);
           if (data.answers) setAnswers(data.answers || {});
+          if (data.allQAnswers) setAllQAnswers(data.allQAnswers || {});
           if (data.activeView) setActiveView(data.activeView);
           if (data.selectedQ) setSelectedQ(data.selectedQ);
           if (data.selectedDiags) setSelectedDiags(data.selectedDiags);
@@ -2856,6 +2962,7 @@ function App() {
       setActiveView('bigmenu');
       setSelectedQ(null);
       setAnswers({});
+      setAllQAnswers({});
       setResults({});
       setCompletedQ({});
       setSelectedDiags([]);
@@ -2896,6 +3003,26 @@ function App() {
             else setError('אנא הזן שם משתמש וסיסמה');
           }}>כניסה</button>
           {error && <div className="login-error">{error}</div>}
+          {(() => {
+            try {
+              const saved = localStorage.getItem('hadassah_trauma_session');
+              if (saved) {
+                const data = JSON.parse(saved);
+                const hrs = (Date.now() - (data.timestamp || 0)) / (1000 * 60 * 60);
+                if (hrs < 24 && data.intake) {
+                  return (
+                    <button onClick={restoreFromLocalStorage} style={{
+                      width:'100%',marginTop:'12px',padding:'12px',background:'linear-gradient(135deg,#f59e0b,#d97706)',
+                      color:'#fff',border:'none',borderRadius:'10px',fontSize:'.95em',fontWeight:'700',cursor:'pointer',fontFamily:'inherit'
+                    }}>
+                      שחזור נתונים עבור {data.intake.name} ({Math.round(hrs * 60)} דקות)
+                    </button>
+                  );
+                }
+              }
+            } catch(e) {}
+            return null;
+          })()}
         </div>
       </div>
     );
@@ -2994,6 +3121,23 @@ function App() {
   const qName = selectedQ;
   const q = QUESTIONNAIRES.find(x => x.name === qName);
 
+  // Save current answers and go back to questionnaire menu
+  const goBackToMenu = () => {
+    if (qName) {
+      setAllQAnswers(prev => ({...prev, [qName]: answers}));
+    }
+    setSelectedQ(null);
+    setActiveView('questionnaires');
+  };
+
+  // Clear answers for current questionnaire (also from saved)
+  const clearCurrentAnswers = () => {
+    setAnswers({});
+    if (qName) {
+      setAllQAnswers(prev => { const n = {...prev}; delete n[qName]; return n; });
+    }
+  };
+
   const renderContent = () => {
     if (qName && q) {
       if (q.name === 'BDI-II') {
@@ -3003,28 +3147,28 @@ function App() {
             if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === BDI2.items.length) {
               setCompletedQ(prev => ({...prev, [BDI2.name]: true}));
             }
-          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+          }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
       }
       if (q.name === 'C-SSRS') {
         return (
           <ColumbiaQuestionnaire answers={answers} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
-          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+          }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
       }
       if (q.name === 'LEC-5') {
         return (
           <LEC5Questionnaire answers={answers} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
-          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+          }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
       }
       if (q.name === 'SHS') {
         return (
           <SHSQuestionnaire answers={answers} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
-          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+          }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
       }
       if (q.name === 'DES') {
@@ -3034,7 +3178,7 @@ function App() {
             if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === DES.items.length) {
               setCompletedQ(prev => ({...prev, [DES.name]: true}));
             }
-          }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} intake={intake} />
+          }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} intake={intake} />
         );
       }
       return (
@@ -3043,7 +3187,7 @@ function App() {
           if(val !== null && Object.values(newAns).filter(v => v !== null && v !== undefined && v !== '').length === q.items.length) {
             setCompletedQ(prev => ({...prev, [q.name]: true}));
           }
-        }} onBack={() => { setSelectedQ(null); setActiveView('questionnaires'); }} onAddResults={addToResults} onClear={() => setAnswers({})} />
+        }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
       );
     }
 
@@ -3051,7 +3195,15 @@ function App() {
       case 'bigmenu':
         return <BigMenu onNavigate={(view) => setActiveView(view)} />;
       case 'questionnaires':
-        return <QuestionnaireMenu onSelectQ={(name) => { setAnswers({}); setSelectedQ(name); }} completedQ={completedQ} onBack={() => setActiveView('bigmenu')} />;
+        return <QuestionnaireMenu onSelectQ={(name) => {
+          // Save current questionnaire answers before switching
+          if (selectedQ) {
+            setAllQAnswers(prev => ({...prev, [selectedQ]: answers}));
+          }
+          // Load saved answers for the new questionnaire, or start fresh
+          setAnswers(allQAnswers[name] || {});
+          setSelectedQ(name);
+        }} completedQ={completedQ} onBack={() => setActiveView('bigmenu')} />;
       case 'results':
         return (
           <div className="content">
@@ -3103,6 +3255,7 @@ function App() {
       </div>
       <div className="utility-bar">
         <button className="util-btn" onClick={openEditIntake}>עריכת פרטי נבדק</button>
+        <button className="util-btn" onClick={restoreFromLocalStorage}>שחזור אוטומטי</button>
         <button className="util-btn" onClick={saveBackup}>שמירת גיבוי</button>
         <button className="util-btn" onClick={loadBackup}>טעינת גיבוי</button>
         <button className="util-btn danger" onClick={clearAndRestart}>נקה והתחל מחדש</button>
