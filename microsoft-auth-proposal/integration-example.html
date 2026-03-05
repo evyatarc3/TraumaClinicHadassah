@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוגמת שילוב - אימות Microsoft | קליניקת טראומה הדסה</title>
+
+    <!--
+        =================================================================
+        דוגמת שילוב (Integration Example)
+
+        קובץ זה מדגים כיצד האימות והאחסון בענן ישתלבו
+        באפליקציה הקיימת. זהו NOT קוד production - אלא
+        proof of concept להדגמה בפני צוות אבטחת מידע.
+        =================================================================
+    -->
+
+    <!-- MSAL.js v2 - Microsoft Authentication Library -->
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+
+    <!-- React (same as existing app) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Configuration & Services -->
+    <script src="auth-config.js"></script>
+    <script src="auth-service.js"></script>
+    <script src="data-service.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: linear-gradient(135deg, #0078d4 0%, #004578 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .logo { text-align: center; margin-bottom: 24px; }
+        .logo h1 { color: #004578; font-size: 24px; }
+        .logo p { color: #666; font-size: 14px; margin-top: 8px; }
+        .ms-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px 24px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Heebo', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .ms-login-btn:hover { background: #005a9e; }
+        .ms-login-btn svg { width: 24px; height: 24px; }
+        .user-info {
+            background: #f0f7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .user-info h3 { color: #004578; margin-bottom: 12px; }
+        .user-info p { color: #333; margin: 6px 0; font-size: 14px; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-ok { background: #dff6dd; color: #107c10; }
+        .status-error { background: #fde7e9; color: #d13438; }
+        .status-loading { background: #fff4ce; color: #797673; }
+        .actions { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .action-btn {
+            padding: 12px 20px;
+            border: 2px solid #0078d4;
+            background: white;
+            color: #0078d4;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Heebo', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover { background: #0078d4; color: white; }
+        .log { margin-top: 20px; max-height: 200px; overflow-y: auto; }
+        .log-entry {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
+        }
+        .log-entry.success { color: #107c10; }
+        .log-entry.error { color: #d13438; }
+        .log-entry.info { color: #0078d4; }
+        .separator {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 20px 0;
+        }
+        .note {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            color: #5d4037;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script type="text/babel">
+        /**
+         * דוגמת שילוב - React Component
+         *
+         * מדגים את זרימת העבודה המלאה:
+         * 1. התחברות עם Microsoft
+         * 2. בדיקת הרשאות (חברות בקבוצה)
+         * 3. שמירת נתונים ב-SharePoint
+         * 4. קריאת נתונים מ-SharePoint
+         */
+
+        const { useState, useEffect, useCallback } = React;
+
+        // =====================================================================
+        // Microsoft Login Button Component
+        // כפתור התחברות בסגנון Microsoft הרשמי
+        // =====================================================================
+        function MicrosoftLoginButton({ onClick, loading }) {
+            return (
+                <button className="ms-login-btn" onClick={onClick} disabled={loading}>
+                    <svg viewBox="0 0 24 24" fill="white">
+                        <path d="M11.4 2H2v9.4h9.4V2zm0 10.6H2V22h9.4V12.6zm10.6-10.6H12.6v9.4H22V2zm0 10.6H12.6V22H22V12.6z"/>
+                    </svg>
+                    {loading ? "מתחבר..." : "התחבר עם חשבון Microsoft הדסה"}
+                </button>
+            );
+        }
+
+        // =====================================================================
+        // Login Page Component
+        // מחליף את דף הכניסה הנוכחי (עם הסיסמאות ה-hardcoded)
+        // =====================================================================
+        function LoginPage({ onLogin }) {
+            const [loading, setLoading] = useState(false);
+
+            const handleLogin = async () => {
+                setLoading(true);
+                try {
+                    await authService.login();
+                    // הדפדפן יופנה ל-Microsoft login
+                    // לאחר התחברות מוצלחת, יחזור לאפליקציה
+                } catch (error) {
+                    setLoading(false);
+                    alert("שגיאה בהתחברות: " + error.message);
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="logo">
+                        <h1>מערכת שאלוני טראומה</h1>
+                        <p>קליניקת הדסה - גישה למטפלים מורשים בלבד</p>
+                    </div>
+
+                    <MicrosoftLoginButton onClick={handleLogin} loading={loading} />
+
+                    <div className="note">
+                        <strong>שימו לב:</strong> גישה למערכת מותרת רק למטפלי הקליניקה
+                        עם חשבון Microsoft ארגוני של הדסה. ניסיון התחברות עם חשבון
+                        לא מורשה ייחסם אוטומטית.
+                    </div>
+                </div>
+            );
+        }
+
+        // =====================================================================
+        // Dashboard Component
+        // מוצג לאחר התחברות מוצלחת - מדגים פעולות על הנתונים
+        // =====================================================================
+        function Dashboard({ user, onLogout }) {
+            const [logs, setLogs] = useState([]);
+            const [sessions, setSessions] = useState([]);
+
+            const addLog = useCallback((message, type = "info") => {
+                const time = new Date().toLocaleTimeString("he-IL");
+                setLogs(prev => [...prev, { message: `[${time}] ${message}`, type }]);
+            }, []);
+
+            // דוגמה: שמירת session חדש
+            const handleSaveDemo = async () => {
+                addLog("שומר session לדוגמה ב-SharePoint...");
+                try {
+                    const dataService = new DataService(authService);
+                    await dataService.initialize();
+
+                    const demoSession = {
+                        intake: {
+                            patientName: "ישראל ישראלי",
+                            patientAge: "35",
+                        },
+                        answers: { "PCL5_q1": 2, "PCL5_q2": 3 },
+                        results: { "PCL-5": { total: 42, severity: "moderate" } },
+                        isComplete: false,
+                    };
+
+                    const sessionId = await dataService.savePatientSession(demoSession);
+                    addLog(`Session נשמר בהצלחה! ID: ${sessionId}`, "success");
+                } catch (error) {
+                    addLog(`שגיאה: ${error.message}`, "error");
+                }
+            };
+
+            // דוגמה: קריאת sessions
+            const handleLoadDemo = async () => {
+                addLog("טוען sessions מ-SharePoint...");
+                try {
+                    const dataService = new DataService(authService);
+                    await dataService.initialize();
+
+                    const mySessions = await dataService.getMyPatientSessions();
+                    setSessions(mySessions);
+                    addLog(`נמצאו ${mySessions.length} sessions`, "success");
+                } catch (error) {
+                    addLog(`שגיאה: ${error.message}`, "error");
+                }
+            };
+
+            // דוגמה: בדיקת הרשאות קבוצה
+            const handleCheckGroup = async () => {
+                addLog("בודק חברות בקבוצת המטפלים...");
+                try {
+                    const isAuthorized = await authService.verifyGroupMembership();
+                    if (isAuthorized) {
+                        addLog("מאומת - המשתמש חבר בקבוצת TraumaClinicTherapists", "success");
+                    } else {
+                        addLog("לא מורשה - המשתמש אינו חבר בקבוצה", "error");
+                    }
+                } catch (error) {
+                    addLog(`שגיאה: ${error.message}`, "error");
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="logo">
+                        <h1>מערכת שאלוני טראומה</h1>
+                        <span className="status-badge status-ok">מחובר</span>
+                    </div>
+
+                    <div className="user-info">
+                        <h3>פרטי משתמש</h3>
+                        <p><strong>שם:</strong> {user.name}</p>
+                        <p><strong>אימייל:</strong> {user.email}</p>
+                        <p><strong>Tenant:</strong> {user.tenantId}</p>
+                    </div>
+
+                    <div className="actions">
+                        <button className="action-btn" onClick={handleCheckGroup}>
+                            בדיקת הרשאות קבוצה
+                        </button>
+                        <button className="action-btn" onClick={handleSaveDemo}>
+                            דוגמה: שמירת Session ב-SharePoint
+                        </button>
+                        <button className="action-btn" onClick={handleLoadDemo}>
+                            דוגמה: טעינת Sessions מ-SharePoint
+                        </button>
+                        <button className="action-btn" onClick={onLogout} style={{borderColor: '#d13438', color: '#d13438'}}>
+                            התנתק
+                        </button>
+                    </div>
+
+                    {sessions.length > 0 && (
+                        <div style={{marginTop: 16}}>
+                            <h4>Sessions שנמצאו:</h4>
+                            {sessions.map((s, i) => (
+                                <div key={i} style={{padding: 8, borderBottom: '1px solid #eee', fontSize: 13}}>
+                                    {s.sessionId} | {s.patientInitials} | {s.status} | {new Date(s.lastModified).toLocaleDateString('he-IL')}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="log">
+                        {logs.map((log, i) => (
+                            <div key={i} className={`log-entry ${log.type}`}>{log.message}</div>
+                        ))}
+                    </div>
+
+                    <div className="note">
+                        <strong>הדגמה בלבד:</strong> קובץ זה מדגים את זרימת האימות
+                        והגישה לנתונים. באפליקציה הסופית, כפתורי הדוגמה יוחלפו
+                        בזרימת העבודה הרגילה של השאלונים.
+                    </div>
+                </div>
+            );
+        }
+
+        // =====================================================================
+        // Main App Component
+        // =====================================================================
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                initializeAuth();
+            }, []);
+
+            const initializeAuth = async () => {
+                try {
+                    const currentUser = await authService.initialize();
+                    if (currentUser) {
+                        setUser(authService.getCurrentUser());
+                    }
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleLogout = async () => {
+                await authService.logout();
+            };
+
+            if (loading) {
+                return (
+                    <div className="container" style={{textAlign: 'center'}}>
+                        <span className="status-badge status-loading">מאמת...</span>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="container">
+                        <span className="status-badge status-error">שגיאה: {error}</span>
+                    </div>
+                );
+            }
+
+            if (!user) {
+                return <LoginPage />;
+            }
+
+            return <Dashboard user={user} onLogout={handleLogout} />;
+        }
+
+        // =====================================================================
+        // Render
+        // =====================================================================
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
