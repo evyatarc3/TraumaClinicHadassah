@@ -2232,65 +2232,61 @@ function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, in
     const val = answers['lec_' + i];
     return val !== null && val !== undefined && val < 4; // first 4 options mean event occurred
   });
-  const hasAutoExported = React.useRef(false);
   const maxAnsweredIdx = Math.max(-1, ...items.map((_, i) => answers['lec_' + i] !== null && answers['lec_' + i] !== undefined ? i : -1).filter(x => x >= 0));
 
-  React.useEffect(() => {
-    if (allAnswered && !hasAutoExported.current) {
-      hasAutoExported.current = true;
-      const endorsed = items.filter((_, i) => {
-        const val = answers['lec_' + i];
-        return val !== null && val !== undefined && val < 4;
-      }).length;
-      const scoringResult = {total: endorsed, max: items.length, severity: endorsed > 0 ? endorsed + ' אירועים דווחו' : 'אין אירועים', cls: endorsed >= 5 ? 'sev-severe' : endorsed >= 2 ? 'sev-moderate' : endorsed >= 1 ? 'sev-mild' : 'sev-normal'};
-      onAddResults(LEC5.name, LEC5.fullName, scoringResult, {...answers});
-      try {
-        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
-        const dateStr = new Date().toISOString().slice(0,10);
-        // Custom LEC-5 Excel export
-        const rows = [];
-        rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
-        rows.push([{v:LEC5.fullName,s:XS.subtitle}]);
+  const doExport = () => {
+    const endorsed = items.filter((_, i) => {
+      const val = answers['lec_' + i];
+      return val !== null && val !== undefined && val < 4;
+    }).length;
+    const scoringResult = {total: endorsed, max: items.length, severity: endorsed > 0 ? endorsed + ' אירועים דווחו' : 'אין אירועים', cls: endorsed >= 5 ? 'sev-severe' : endorsed >= 2 ? 'sev-moderate' : endorsed >= 1 ? 'sev-mild' : 'sev-normal'};
+    onAddResults(LEC5.name, LEC5.fullName, scoringResult, {...answers});
+    try {
+      const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+      const dateStr = new Date().toISOString().slice(0,10);
+      // Custom LEC-5 Excel export
+      const rows = [];
+      rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+      rows.push([{v:LEC5.fullName,s:XS.subtitle}]);
+      rows.push(['']);
+      rows.push([{v:'סה"כ אירועים שדווחו',s:XS.labelCell},{v:endorsed,s:XS.valueCell}]);
+      rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
+      rows.push(['']);
+      rows.push([{v:'תשובות',s:XS.sectionHeader}]);
+      rows.push([{v:'מספר',s:XS.headerRow},{v:'אירוע',s:XS.headerRowRight},{v:'תשובה',s:XS.headerRowRight}]);
+      items.forEach((item, idx) => {
+        const rs = idx%2===0?XS.evenRow:XS.oddRow;
+        const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
+        const val = answers['lec_' + idx];
+        const ansText = val !== null && val !== undefined ? opts[val] : '';
+        rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:ansText,s:rs}]);
+      });
+      // Add Criterion A info if present
+      if (answers['lec_critA_0'] || answers['lec_critA_1'] || answers['lec_critA_2']) {
         rows.push(['']);
-        rows.push([{v:'סה"כ אירועים שדווחו',s:XS.labelCell},{v:endorsed,s:XS.valueCell}]);
-        rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
-        rows.push(['']);
-        rows.push([{v:'תשובות',s:XS.sectionHeader}]);
-        rows.push([{v:'מספר',s:XS.headerRow},{v:'אירוע',s:XS.headerRowRight},{v:'תשובה',s:XS.headerRowRight}]);
-        items.forEach((item, idx) => {
-          const rs = idx%2===0?XS.evenRow:XS.oddRow;
-          const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
-          const val = answers['lec_' + idx];
-          const ansText = val !== null && val !== undefined ? opts[val] : '';
-          rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:ansText,s:rs}]);
-        });
-        // Add Criterion A info if present
-        if (answers['lec_critA_0'] || answers['lec_critA_1'] || answers['lec_critA_2']) {
-          rows.push(['']);
-          rows.push([{v:'קריטריון A',s:XS.sectionHeader}]);
-          LEC5.criterionA.fields.forEach((field, fi) => {
-            if (answers['lec_critA_' + fi]) {
-              rows.push([{v:field,s:XS.labelCell},{v:answers['lec_critA_' + fi],s:XS.valueCellRight}]);
-            }
-          });
-          if (answers['lec_exposure']) {
-            rows.push([{v:'סוג חשיפה',s:XS.labelCell},{v:answers['lec_exposure'],s:XS.valueCellRight}]);
+        rows.push([{v:'קריטריון A',s:XS.sectionHeader}]);
+        LEC5.criterionA.fields.forEach((field, fi) => {
+          if (answers['lec_critA_' + fi]) {
+            rows.push([{v:field,s:XS.labelCell},{v:answers['lec_critA_' + fi],s:XS.valueCellRight}]);
           }
-          LEC5.criterionA.yesNoQuestions.forEach((q, qi) => {
-            if (answers['lec_critA_yn_' + qi] !== null && answers['lec_critA_yn_' + qi] !== undefined) {
-              rows.push([{v:q,s:XS.labelCell},{v:answers['lec_critA_yn_' + qi] === '1' ? 'כן' : 'לא',s:XS.valueCell}]);
-            }
-          });
+        });
+        if (answers['lec_exposure']) {
+          rows.push([{v:'סוג חשיפה',s:XS.labelCell},{v:answers['lec_exposure'],s:XS.valueCellRight}]);
         }
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        styleSheet(ws, [8, 45, 20]);
-        ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'LEC-5');
-        XLSX.writeFile(wb, `${patName}_LEC-5_${dateStr}.xlsx`);
-      } catch(e) { console.error('Auto-export error:', e); }
-    }
-  }, [allAnswered]);
+        LEC5.criterionA.yesNoQuestions.forEach((q, qi) => {
+          if (answers['lec_critA_yn_' + qi] !== null && answers['lec_critA_yn_' + qi] !== undefined) {
+            rows.push([{v:q,s:XS.labelCell},{v:answers['lec_critA_yn_' + qi] === '1' ? 'כן' : 'לא',s:XS.valueCell}]);
+          }
+        });
+      }
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      styleSheet(ws, [8, 45, 20]);
+      ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'LEC-5');
+      XLSX.writeFile(wb, `${patName}_LEC-5_${dateStr}.xlsx`);
+    } catch(e) { console.error('Export error:', e); }
+  };
 
   return (
     <div className="section">
@@ -2410,13 +2406,16 @@ function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, in
         </div>
       )}
 
-      {allAnswered && (
-        <div className="export-section" style={{marginTop:'24px'}}>
-          <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em'}}>
-            ✅ השאלון הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד.
+      <div className="export-section" style={{marginTop:'24px'}}>
+        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={doExport}>
+          העברה לתוצאות והורדת Excel
+        </button>
+        {allAnswered && (
+          <div style={{padding:'8px',color:'#065f46',fontSize:'.85em',marginTop:'8px'}}>
+            ✅ כל השאלות נענו. {hasAnyEvent ? 'ניתן למלא את החלק המילולי (קריטריון A) לפני ההעברה.' : ''}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -3742,11 +3741,11 @@ function App() {
         </div>
       </div>
       <div className="top-nav">
-        <button className={`top-nav-tab ${activeView === 'bigmenu' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('bigmenu'); }}>דף הבית</button>
-        <button className={`top-nav-tab ${activeView === 'questionnaires' || selectedQ ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('questionnaires'); }}>שאלונים</button>
-        <button className={`top-nav-tab ${activeView === 'results' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('results'); }}>תוצאות</button>
-        <button className={`top-nav-tab ${activeView === 'diag' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('diag'); }}>אבחנות F</button>
-        <button className={`top-nav-tab ${activeView === 'sessions' ? 'active' : ''}`} onClick={() => { setSelectedQ(null); setActiveView('sessions'); }}>פגישות</button>
+        <button className={`top-nav-tab ${activeView === 'bigmenu' ? 'active' : ''}`} onClick={() => { if(selectedQ) { setAllQAnswers(prev => ({...prev, [selectedQ]: answers})); } setSelectedQ(null); setActiveView('bigmenu'); }}>דף הבית</button>
+        <button className={`top-nav-tab ${activeView === 'questionnaires' || selectedQ ? 'active' : ''}`} onClick={() => { if(selectedQ) { setAllQAnswers(prev => ({...prev, [selectedQ]: answers})); } setSelectedQ(null); setActiveView('questionnaires'); }}>שאלונים</button>
+        <button className={`top-nav-tab ${activeView === 'results' ? 'active' : ''}`} onClick={() => { if(selectedQ) { setAllQAnswers(prev => ({...prev, [selectedQ]: answers})); } setSelectedQ(null); setActiveView('results'); }}>תוצאות</button>
+        <button className={`top-nav-tab ${activeView === 'diag' ? 'active' : ''}`} onClick={() => { if(selectedQ) { setAllQAnswers(prev => ({...prev, [selectedQ]: answers})); } setSelectedQ(null); setActiveView('diag'); }}>אבחנות F</button>
+        <button className={`top-nav-tab ${activeView === 'sessions' ? 'active' : ''}`} onClick={() => { if(selectedQ) { setAllQAnswers(prev => ({...prev, [selectedQ]: answers})); } setSelectedQ(null); setActiveView('sessions'); }}>פגישות</button>
       </div>
       <div className="utility-bar">
         <button className="util-btn" onClick={openEditIntake}>עריכת פרטי נבדק</button>
