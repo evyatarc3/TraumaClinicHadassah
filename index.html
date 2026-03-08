@@ -243,6 +243,11 @@ body{font-family:'Heebo',sans-serif;background:#0f172a;min-height:100vh}
 .bdi-item.skipped{border-color:#fca5a5;background:#fef2f2}
 .skipped-label{display:inline-block;font-size:.75em;color:#dc2626;font-weight:500;margin-top:6px;padding:2px 8px;background:#fee2e2;border-radius:4px}
 
+/* Font size adjustment */
+.font-size-controls{position:fixed;bottom:20px;left:20px;z-index:999;display:flex;gap:4px;background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.2);padding:6px;border:1px solid #e2e8f0}
+.font-size-btn{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;font-size:1em;background:#fff;color:#475569;display:flex;align-items:center;justify-content:center;transition:.2s}
+.font-size-btn:hover{background:#f1f5f9;border-color:#3b82f6;color:#3b82f6}
+
 /* Clear questionnaire button */
 .clear-q-btn{padding:8px 18px;background:#fff;color:#dc2626;border:2px solid #fca5a5;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;font-size:.85em;transition:.2s}
 .clear-q-btn:hover{background:#fef2f2;border-color:#dc2626}
@@ -1532,25 +1537,28 @@ function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onCl
   const scoringResult = allAnswered && q.scoring ? q.scoring(answers) : null;
   const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
   const [showResults, setShowResults] = useState(false);
-  const hasAutoExported = React.useRef(false);
+  const lastExportedRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (allAnswered && scoringResult && !hasAutoExported.current) {
-      hasAutoExported.current = true;
-      onAddResults(q.name, q.fullName, scoringResult, {...answers});
-      try {
-        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
-        const dateStr = new Date().toISOString().slice(0,10);
-        exportQuestionnaireExcel(q, answers, scoringResult, `${patName}_${q.name}_${dateStr}.xlsx`);
-      } catch(e) { console.error('Auto-export error:', e); }
+    if (allAnswered && scoringResult) {
+      const ansKey = JSON.stringify(answers);
+      if (lastExportedRef.current !== ansKey) {
+        lastExportedRef.current = ansKey;
+        onAddResults(q.name, q.fullName, scoringResult, {...answers});
+        try {
+          const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+          const dateStr = new Date().toISOString().slice(0,10);
+          exportQuestionnaireExcel(q, answers, scoringResult, `${patName}_${q.name}_${dateStr}.xlsx`);
+        } catch(e) { console.error('Auto-export error:', e); }
+      }
     }
-  }, [allAnswered]);
+  }, [allAnswered, answers]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; setShowResults(false); onClear(); } }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { lastExportedRef.current = null; setShowResults(false); onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{q.fullName}</h3>
       <div style={{marginBottom:'20px'}}>{q.description}</div>
@@ -1623,54 +1631,61 @@ function DESQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, int
   const allAnswered = ansCount === DES.items.length;
   const scoringResult = allAnswered ? DES.scoring(answers) : null;
   const [showResults, setShowResults] = useState(false);
-  const hasAutoExported = React.useRef(false);
+  const lastExportedRef = React.useRef(null);
+
+  const doExport = (currentAnswers, sr) => {
+    onAddResults(DES.name, DES.fullName, sr, {...currentAnswers});
+    try {
+      const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+      const dateStr = new Date().toISOString().slice(0,10);
+      const rows = [];
+      rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+      rows.push([{v:DES.fullName,s:XS.subtitle}]);
+      rows.push(['']);
+      rows.push([{v:'ציון כולל (ממוצע)',s:XS.labelCell},{v:sr.total,s:XS.valueCell}]);
+      rows.push([{v:'מקסימום',s:XS.labelCell},{v:sr.max,s:XS.valueCell}]);
+      rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:sr.severity,s:XS.severity}]);
+      rows.push(['']);
+      if(sr.subdomains && sr.subdomains.length > 0) {
+        rows.push([{v:'תת-תחומים',s:XS.sectionHeader}]);
+        rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow}]);
+        let si = 0;
+        sr.subdomains.forEach(sub => {
+          const rs = si%2===0?XS.evenRow:XS.oddRow; const rc = si%2===0?XS.evenRowCenter:XS.oddRowCenter;
+          rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc}]); si++;
+        });
+        rows.push(['']);
+      }
+      rows.push([{v:'תשובות',s:XS.sectionHeader}]);
+      rows.push([{v:'מספר',s:XS.headerRow},{v:'שאלה',s:XS.headerRowRight},{v:'אחוז זמן (0-100)',s:XS.headerRow}]);
+      DES.items.forEach((item, idx) => {
+        const rs = idx%2===0?XS.evenRow:XS.oddRow; const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
+        rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:currentAnswers[idx] !== null && currentAnswers[idx] !== undefined ? currentAnswers[idx] : '',s:rc}]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      styleSheet(ws, [8, 50, 18]);
+      ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'DES');
+      XLSX.writeFile(wb, `${patName}_DES_${dateStr}.xlsx`);
+    } catch(e) { console.error('Auto-export error:', e); }
+  };
 
   React.useEffect(() => {
-    if (allAnswered && scoringResult && !hasAutoExported.current) {
-      hasAutoExported.current = true;
-      onAddResults(DES.name, DES.fullName, scoringResult, {...answers});
-      try {
-        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
-        const dateStr = new Date().toISOString().slice(0,10);
-        const rows = [];
-        rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
-        rows.push([{v:DES.fullName,s:XS.subtitle}]);
-        rows.push(['']);
-        rows.push([{v:'ציון כולל (ממוצע)',s:XS.labelCell},{v:scoringResult.total,s:XS.valueCell}]);
-        rows.push([{v:'מקסימום',s:XS.labelCell},{v:scoringResult.max,s:XS.valueCell}]);
-        rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
-        rows.push(['']);
-        if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
-          rows.push([{v:'תת-תחומים',s:XS.sectionHeader}]);
-          rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow}]);
-          let si = 0;
-          scoringResult.subdomains.forEach(sub => {
-            const rs = si%2===0?XS.evenRow:XS.oddRow; const rc = si%2===0?XS.evenRowCenter:XS.oddRowCenter;
-            rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc}]); si++;
-          });
-          rows.push(['']);
-        }
-        rows.push([{v:'תשובות',s:XS.sectionHeader}]);
-        rows.push([{v:'מספר',s:XS.headerRow},{v:'שאלה',s:XS.headerRowRight},{v:'אחוז זמן (0-100)',s:XS.headerRow}]);
-        DES.items.forEach((item, idx) => {
-          const rs = idx%2===0?XS.evenRow:XS.oddRow; const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
-          rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '',s:rc}]);
-        });
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        styleSheet(ws, [8, 50, 18]);
-        ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'DES');
-        XLSX.writeFile(wb, `${patName}_DES_${dateStr}.xlsx`);
-      } catch(e) { console.error('Auto-export error:', e); }
+    if (allAnswered && scoringResult) {
+      const ansKey = JSON.stringify(answers);
+      if (lastExportedRef.current !== ansKey) {
+        lastExportedRef.current = ansKey;
+        doExport(answers, scoringResult);
+      }
     }
-  }, [allAnswered]);
+  }, [allAnswered, answers]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; setShowResults(false); onClear(); } }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { lastExportedRef.current = null; setShowResults(false); onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{DES.fullName}</h3>
       <div style={{marginBottom:'20px'}}>{DES.description}</div>
@@ -1685,20 +1700,30 @@ function DESQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, int
         {DES.items.map((item, idx) => {
           const val = answers[idx] !== null && answers[idx] !== undefined && answers[idx] !== '' ? parseInt(answers[idx]) : null;
           const isAnswered = val !== null;
+          const maxIdx = Math.max(-1, ...Object.keys(answers).filter(k => !isNaN(parseInt(k)) && answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+          const isSkipped = idx < maxIdx && !isAnswered;
           return (
-            <div key={idx} className={`q-item ${isAnswered ? 'answered' : ''}`}>
+            <div key={idx} className={`q-item ${isAnswered ? 'answered' : ''} ${isSkipped ? 'skipped' : ''}`}>
               <div className="q-text">{item}<span className="q-num">{idx+1}</span></div>
               <div className="slider-row">
                 <span style={{fontSize:'.85em',color:'#64748b',minWidth:'30px'}}>0%</span>
-                <input type="range" min="0" max="100" step="10" value={val !== null ? val : 0}
+                <input type="range" min="0" max="100" step="10" value={isAnswered ? val : 0}
                   onChange={(e) => onAnswer(idx, parseInt(e.target.value))}
-                  style={{flex:1,accentColor:'#3b82f6'}} />
+                  style={{flex:1,accentColor: isAnswered ? '#3b82f6' : '#94a3b8'}} />
                 <span style={{fontSize:'.85em',color:'#64748b',minWidth:'40px'}}>100%</span>
-                <div className="slider-val">{val !== null ? val + '%' : '-'}</div>
+                <div className="slider-val" style={{background: isAnswered ? '#3b82f6' : '#94a3b8'}}>{isAnswered ? val + '%' : '-'}</div>
               </div>
-              {isAnswered && (
-                <button className="deselect-btn" style={{marginTop:'6px'}} onClick={() => onAnswer(idx, null)}>ביטול</button>
-              )}
+              <div style={{display:'flex',gap:'8px',marginTop:'6px',alignItems:'center'}}>
+                {!isAnswered && (
+                  <button className="q-opt" onClick={() => onAnswer(idx, 0)} style={{fontSize:'.8em',padding:'6px 14px'}}>
+                    אשר 0% (אף פעם)
+                  </button>
+                )}
+                {isAnswered && (
+                  <button className="deselect-btn" onClick={() => onAnswer(idx, null)}>ביטול</button>
+                )}
+              </div>
+              {isSkipped && <div className="skipped-label">לא סומנה תשובה</div>}
             </div>
           );
         })}
@@ -1743,25 +1768,28 @@ function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, in
   const scoringResult = allAnswered ? BDI2.scoring(answers) : null;
   const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
   const [showResults, setShowResults] = useState(false);
-  const hasAutoExported = React.useRef(false);
+  const lastExportedRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (allAnswered && scoringResult && !hasAutoExported.current) {
-      hasAutoExported.current = true;
-      onAddResults(BDI2.name, BDI2.fullName, scoringResult, {...answers});
-      try {
-        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
-        const dateStr = new Date().toISOString().slice(0,10);
-        exportQuestionnaireExcel(BDI2, answers, scoringResult, `${patName}_BDI-II_${dateStr}.xlsx`);
-      } catch(e) { console.error('Auto-export error:', e); }
+    if (allAnswered && scoringResult) {
+      const ansKey = JSON.stringify(answers);
+      if (lastExportedRef.current !== ansKey) {
+        lastExportedRef.current = ansKey;
+        onAddResults(BDI2.name, BDI2.fullName, scoringResult, {...answers});
+        try {
+          const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+          const dateStr = new Date().toISOString().slice(0,10);
+          exportQuestionnaireExcel(BDI2, answers, scoringResult, `${patName}_BDI-II_${dateStr}.xlsx`);
+        } catch(e) { console.error('Auto-export error:', e); }
+      }
     }
-  }, [allAnswered]);
+  }, [allAnswered, answers]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; setShowResults(false); onClear(); } }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { lastExportedRef.current = null; setShowResults(false); onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{BDI2.fullName}</h3>
       <div style={{marginBottom:'20px'}}>{BDI2.description}</div>
@@ -2427,26 +2455,29 @@ function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, int
   const allAnswered = answeredCount === items.length;
   const scoringResult = allAnswered ? SHS.scoring(answers) : null;
   const pct = Math.round(answeredCount / items.length * 100);
-  const hasAutoExported = React.useRef(false);
+  const lastExportedRef = React.useRef(null);
   const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => !isNaN(parseInt(k)) && answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
 
   React.useEffect(() => {
-    if (allAnswered && scoringResult && !hasAutoExported.current) {
-      hasAutoExported.current = true;
-      onAddResults(SHS.name, SHS.fullName, scoringResult, {...answers});
-      try {
-        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
-        const dateStr = new Date().toISOString().slice(0,10);
-        exportQuestionnaireExcel(SHS, answers, scoringResult, `${patName}_SHS_${dateStr}.xlsx`);
-      } catch(e) { console.error('Auto-export error:', e); }
+    if (allAnswered && scoringResult) {
+      const ansKey = JSON.stringify(answers);
+      if (lastExportedRef.current !== ansKey) {
+        lastExportedRef.current = ansKey;
+        onAddResults(SHS.name, SHS.fullName, scoringResult, {...answers});
+        try {
+          const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+          const dateStr = new Date().toISOString().slice(0,10);
+          exportQuestionnaireExcel(SHS, answers, scoringResult, `${patName}_SHS_${dateStr}.xlsx`);
+        } catch(e) { console.error('Auto-export error:', e); }
+      }
     }
-  }, [allAnswered]);
+  }, [allAnswered, answers]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; onClear(); } }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { lastExportedRef.current = null; onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{SHS.fullName}</h3>
       <div className="progress-text">
@@ -2516,27 +2547,30 @@ function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, in
   const totalAnswered = part1Count + funcCount;
   const pct = Math.round(totalAnswered / totalItems * 100);
   const allPart1 = part1Count === MIOS.items.length;
-  const hasAutoExported = React.useRef(false);
+  const lastExportedRef = React.useRef(null);
   const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => !isNaN(parseInt(k)) && answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
 
   React.useEffect(() => {
-    if (allPart1 && !hasAutoExported.current) {
-      hasAutoExported.current = true;
-      const scoringResult = MIOS.scoring(answers);
-      onAddResults(MIOS.name, MIOS.fullName, scoringResult, {...answers});
-      try {
-        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
-        const dateStr = new Date().toISOString().slice(0,10);
-        exportQuestionnaireExcel(MIOS, answers, scoringResult, `${patName}_MIOS_${dateStr}.xlsx`);
-      } catch(e) { console.error('Auto-export error:', e); }
+    if (allPart1) {
+      const ansKey = JSON.stringify(answers);
+      if (lastExportedRef.current !== ansKey) {
+        lastExportedRef.current = ansKey;
+        const scoringResult = MIOS.scoring(answers);
+        onAddResults(MIOS.name, MIOS.fullName, scoringResult, {...answers});
+        try {
+          const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+          const dateStr = new Date().toISOString().slice(0,10);
+          exportQuestionnaireExcel(MIOS, answers, scoringResult, `${patName}_MIOS_${dateStr}.xlsx`);
+        } catch(e) { console.error('Auto-export error:', e); }
+      }
     }
-  }, [allPart1]);
+  }, [allPart1, answers]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; onClear(); } }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { lastExportedRef.current = null; onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{MIOS.fullName}</h3>
       <div style={{marginBottom:'16px',color:'#64748b',fontSize:'.9em',lineHeight:'1.6',whiteSpace:'pre-line'}}>{MIOS.description}</div>
@@ -2648,6 +2682,19 @@ function ResultsView({data, selectedDiags, setSelectedDiags}) {
     'sev-mild': {bg:'#fef9c3',border:'#eab308',text:'#854d0e'},
     'sev-moderate': {bg:'#fed7aa',border:'#f97316',text:'#9a3412'},
     'sev-severe': {bg:'#fecaca',border:'#ef4444',text:'#991b1b'},
+    'sev-verysevere': {bg:'#991b1b',border:'#7f1d1d',text:'#ffffff'},
+    'risk-low': {bg:'#dcfce7',border:'#22c55e',text:'#166534'},
+    'risk-moderate': {bg:'#fef9c3',border:'#eab308',text:'#854d0e'},
+    'risk-high': {bg:'#fecaca',border:'#ef4444',text:'#991b1b'},
+  };
+  const getSevColor = (cls, severity) => {
+    if (cls && sevColors[cls]) return sevColors[cls];
+    // Infer from severity text if cls is missing or unrecognized
+    const sev = (severity || '').toLowerCase();
+    if (sev.includes('חמור') || sev.includes('severe') || sev.includes('גבוה') || sev.includes('high')) return sevColors['sev-severe'];
+    if (sev.includes('בינוני') || sev.includes('moderate')) return sevColors['sev-moderate'];
+    if (sev.includes('קל') || sev.includes('mild')) return sevColors['sev-mild'];
+    return sevColors['sev-normal'];
   };
 
   const getFcodeForResult = (qName, result) => {
@@ -2690,7 +2737,7 @@ function ResultsView({data, selectedDiags, setSelectedDiags}) {
           }}>
             {Object.entries(data).map(([key, result]) => {
               if (!result.results) return null;
-              const colors = sevColors[result.results.cls] || sevColors['sev-normal'];
+              const colors = getSevColor(result.results.cls, result.results.severity);
               const fcodes = getFcodeForResult(key, result);
               return (
                 <div key={key} style={{
@@ -2768,7 +2815,7 @@ function ResultsView({data, selectedDiags, setSelectedDiags}) {
                 {result.results && (
                   <>
                     <div className="score-display">{result.results.total}/{result.results.max}</div>
-                    <div className={`severity-badge ${result.results.cls}`}>{result.results.severity}</div>
+                    <div className="severity-badge" style={{background:getSevColor(result.results.cls, result.results.severity).bg, color:getSevColor(result.results.cls, result.results.severity).text}}>{result.results.severity}</div>
                     {result.results.subdomains && result.results.subdomains.length > 1 && (
                       <div className="subdomain">
                         {result.results.subdomains.filter(sub => sub.name && sub.name.trim() !== '').map((sub, idx) => (
@@ -3318,6 +3365,22 @@ function exportQuestionnaireExcel(q, answers, scoringResult, customFilename) {
 
 // ==================== MAIN APP ====================
 
+function FontSizeControls() {
+  const [size, setSize] = useState(100);
+  const change = (delta) => {
+    const newSize = Math.max(80, Math.min(150, size + delta));
+    setSize(newSize);
+    document.documentElement.style.fontSize = newSize + '%';
+  };
+  return (
+    <div className="font-size-controls">
+      <button className="font-size-btn" onClick={() => change(-10)} title="הקטן גופן">א-</button>
+      <button className="font-size-btn" onClick={() => { setSize(100); document.documentElement.style.fontSize = '100%'; }} title="איפוס">{size}%</button>
+      <button className="font-size-btn" onClick={() => change(10)} title="הגדל גופן">א+</button>
+    </div>
+  );
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [intake, setIntake] = useState(null);
@@ -3807,6 +3870,7 @@ function App() {
         </div>
       )}
       {renderContent()}
+      <FontSizeControls />
     </div>
   );
 }
