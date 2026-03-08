@@ -1801,7 +1801,7 @@ function BDI2Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, in
   );
 }
 
-function ColumbiaQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+function ColumbiaQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, intake}) {
   const ideationCount = COLUMBIA.ideationItems.length;
   const behaviorCount = COLUMBIA.behaviorItems.length;
   const totalMainItems = (ideationCount + behaviorCount + 1) * 2; // +1 for NSSI, x2 for timeframes
@@ -2172,26 +2172,131 @@ function ColumbiaQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear
             </div>
           )}
         </div>
-        <button className="export-btn" onClick={() => exportQuestionnaire(COLUMBIA.name, answers, {total: ansTotal, max: totalMainItems, severity: risk.level})}>הורד תוצאות (טקסט)</button>
-        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => onAddResults(COLUMBIA.name, COLUMBIA.fullName, {total: ansTotal, max: totalMainItems, severity: risk.level, cls: risk.cls.replace('risk-','sev-')}, {...answers})}>הוסף לתוצאות</button>
+        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => {
+          const scoringResult = {total: ansTotal, max: totalMainItems, severity: risk.level, cls: risk.cls.replace('risk-','sev-')};
+          onAddResults(COLUMBIA.name, COLUMBIA.fullName, scoringResult, {...answers});
+          try {
+            const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+            const dateStr = new Date().toISOString().slice(0,10);
+            // Custom C-SSRS Excel export
+            const rows = [];
+            rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+            rows.push([{v:COLUMBIA.fullName,s:XS.subtitle}]);
+            rows.push(['']);
+            rows.push([{v:'הערכת סיכון',s:XS.labelCell},{v:risk.level,s:XS.severity}]);
+            rows.push([{v:'שאלות שנענו',s:XS.labelCell},{v:ansTotal + '/' + totalMainItems,s:XS.valueCell}]);
+            rows.push(['']);
+            rows.push([{v:'הרהורים אובדניים',s:XS.sectionHeader}]);
+            rows.push([{v:'שאלה',s:XS.headerRowRight},{v:'בזמן כלשהו בחיים',s:XS.headerRow},{v:'ב-3 חודשים אחרונים',s:XS.headerRow}]);
+            COLUMBIA.ideationItems.forEach((item, i) => {
+              const rs = i%2===0?XS.evenRow:XS.oddRow; const rc = i%2===0?XS.evenRowCenter:XS.oddRowCenter;
+              rows.push([{v:item.text,s:rs},{v:answers['id_life_'+i]==='1'?'כן':answers['id_life_'+i]==='0'?'לא':'',s:rc},{v:answers['id_3m_'+i]==='1'?'כן':answers['id_3m_'+i]==='0'?'לא':'',s:rc}]);
+            });
+            rows.push(['']);
+            rows.push([{v:'התנהגות אובדנית',s:XS.sectionHeader}]);
+            rows.push([{v:'שאלה',s:XS.headerRowRight},{v:'בזמן כלשהו בחיים',s:XS.headerRow},{v:'ב-3 חודשים אחרונים',s:XS.headerRow}]);
+            COLUMBIA.behaviorItems.forEach((item, i) => {
+              const rs = i%2===0?XS.evenRow:XS.oddRow; const rc = i%2===0?XS.evenRowCenter:XS.oddRowCenter;
+              rows.push([{v:item.text,s:rs},{v:answers['beh_life_'+i]==='1'?'כן':answers['beh_life_'+i]==='0'?'לא':'',s:rc},{v:answers['beh_3m_'+i]==='1'?'כן':answers['beh_3m_'+i]==='0'?'לא':'',s:rc}]);
+            });
+            rows.push([{v:COLUMBIA.nssiItem.text,s:XS.evenRow},{v:answers['nssi_life']==='1'?'כן':answers['nssi_life']==='0'?'לא':'',s:XS.evenRowCenter},{v:answers['nssi_3m']==='1'?'כן':answers['nssi_3m']==='0'?'לא':'',s:XS.evenRowCenter}]);
+            if (hasAnyIdeation) {
+              rows.push(['']);
+              rows.push([{v:'עוצמת הרהורים',s:XS.sectionHeader}]);
+              COLUMBIA.intensityItems.forEach((item, i) => {
+                const rs = i%2===0?XS.evenRow:XS.oddRow; const rc = i%2===0?XS.evenRowCenter:XS.oddRowCenter;
+                rows.push([{v:item.text,s:rs},{v:answers['intensity_'+i]||'',s:rc}]);
+              });
+            }
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            styleSheet(ws, [45, 18, 18]);
+            ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'C-SSRS');
+            XLSX.writeFile(wb, `${patName}_C-SSRS_${dateStr}.xlsx`);
+          } catch(e) { console.error('Export error:', e); }
+        }}>הוסף לתוצאות והורד Excel</button>
       </div>
     </div>
   );
 }
 
 
-function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear, intake}) {
   const items = LEC5.items;
   const opts = LEC5.responseOptions;
-  const answeredItems = items.filter((_, i) => opts.some((_, oi) => answers['lec_' + i + '_' + oi])).length;
+  const answeredItems = items.filter((_, i) => answers['lec_' + i] !== null && answers['lec_' + i] !== undefined).length;
+  const allAnswered = answeredItems === items.length;
   const pct = Math.round(answeredItems / items.length * 100);
-  const hasAnyEvent = items.some((_, i) => [0,1,2,3].some(oi => answers['lec_' + i + '_' + oi]));
+  const hasAnyEvent = items.some((_, i) => {
+    const val = answers['lec_' + i];
+    return val !== null && val !== undefined && val < 4; // first 4 options mean event occurred
+  });
+  const hasAutoExported = React.useRef(false);
+  const maxAnsweredIdx = Math.max(-1, ...items.map((_, i) => answers['lec_' + i] !== null && answers['lec_' + i] !== undefined ? i : -1).filter(x => x >= 0));
+
+  React.useEffect(() => {
+    if (allAnswered && !hasAutoExported.current) {
+      hasAutoExported.current = true;
+      const endorsed = items.filter((_, i) => {
+        const val = answers['lec_' + i];
+        return val !== null && val !== undefined && val < 4;
+      }).length;
+      const scoringResult = {total: endorsed, max: items.length, severity: endorsed > 0 ? endorsed + ' אירועים דווחו' : 'אין אירועים', cls: endorsed >= 5 ? 'sev-severe' : endorsed >= 2 ? 'sev-moderate' : endorsed >= 1 ? 'sev-mild' : 'sev-normal'};
+      onAddResults(LEC5.name, LEC5.fullName, scoringResult, {...answers});
+      try {
+        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+        const dateStr = new Date().toISOString().slice(0,10);
+        // Custom LEC-5 Excel export
+        const rows = [];
+        rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
+        rows.push([{v:LEC5.fullName,s:XS.subtitle}]);
+        rows.push(['']);
+        rows.push([{v:'סה"כ אירועים שדווחו',s:XS.labelCell},{v:endorsed,s:XS.valueCell}]);
+        rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
+        rows.push(['']);
+        rows.push([{v:'תשובות',s:XS.sectionHeader}]);
+        rows.push([{v:'מספר',s:XS.headerRow},{v:'אירוע',s:XS.headerRowRight},{v:'תשובה',s:XS.headerRowRight}]);
+        items.forEach((item, idx) => {
+          const rs = idx%2===0?XS.evenRow:XS.oddRow;
+          const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
+          const val = answers['lec_' + idx];
+          const ansText = val !== null && val !== undefined ? opts[val] : '';
+          rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:ansText,s:rs}]);
+        });
+        // Add Criterion A info if present
+        if (answers['lec_critA_0'] || answers['lec_critA_1'] || answers['lec_critA_2']) {
+          rows.push(['']);
+          rows.push([{v:'קריטריון A',s:XS.sectionHeader}]);
+          LEC5.criterionA.fields.forEach((field, fi) => {
+            if (answers['lec_critA_' + fi]) {
+              rows.push([{v:field,s:XS.labelCell},{v:answers['lec_critA_' + fi],s:XS.valueCellRight}]);
+            }
+          });
+          if (answers['lec_exposure']) {
+            rows.push([{v:'סוג חשיפה',s:XS.labelCell},{v:answers['lec_exposure'],s:XS.valueCellRight}]);
+          }
+          LEC5.criterionA.yesNoQuestions.forEach((q, qi) => {
+            if (answers['lec_critA_yn_' + qi] !== null && answers['lec_critA_yn_' + qi] !== undefined) {
+              rows.push([{v:q,s:XS.labelCell},{v:answers['lec_critA_yn_' + qi] === '1' ? 'כן' : 'לא',s:XS.valueCell}]);
+            }
+          });
+        }
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        styleSheet(ws, [8, 45, 20]);
+        ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'LEC-5');
+        XLSX.writeFile(wb, `${patName}_LEC-5_${dateStr}.xlsx`);
+      } catch(e) { console.error('Auto-export error:', e); }
+    }
+  }, [allAnswered]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{LEC5.fullName}</h3>
       <div className="progress-text">
@@ -2216,11 +2321,14 @@ function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
           </thead>
           <tbody>
             {items.map((item, i) => {
-              const hasResponse = opts.some((_, oi) => answers['lec_' + i + '_' + oi]);
+              const selectedOpt = answers['lec_' + i];
+              const hasResponse = selectedOpt !== null && selectedOpt !== undefined;
+              const isSkipped = i < maxAnsweredIdx && !hasResponse;
               return (
-                <tr key={i} style={{borderBottom:'1px solid #e2e8f0',background: hasResponse ? '#eff6ff' : 'transparent'}}>
+                <tr key={i} style={{borderBottom:'1px solid #e2e8f0',background: isSkipped ? '#fef2f2' : hasResponse ? '#eff6ff' : 'transparent'}}>
                   <td style={{padding:'10px',fontWeight:'500',color:'#1e293b'}}>
                     {i+1}. {item}
+                    {isSkipped && <div className="skipped-label" style={{marginTop:'4px',display:'inline-block',marginRight:'8px'}}>לא סומנה תשובה</div>}
                     {i === items.length - 1 && (
                       <div style={{marginTop:'6px'}}>
                         <input type="text" placeholder="פרט/י את האירוע..." value={answers['lec_other_desc'] || ''}
@@ -2230,11 +2338,11 @@ function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
                     )}
                   </td>
                   {opts.map((_, oi) => {
-                    const key = 'lec_' + i + '_' + oi;
                     return (
                       <td key={oi} style={{textAlign:'center',padding:'6px'}}>
-                        <input type="checkbox" checked={!!answers[key]}
-                          onChange={() => onAnswer(key, answers[key] ? null : true)}
+                        <input type="radio" name={'lec_row_' + i} checked={selectedOpt === oi}
+                          onChange={() => onAnswer('lec_' + i, selectedOpt === oi ? null : oi)}
+                          onClick={() => { if(selectedOpt === oi) onAnswer('lec_' + i, null); }}
                           style={{width:'18px',height:'18px',cursor:'pointer',accentColor:'#3b82f6'}} />
                       </td>
                     );
@@ -2302,27 +2410,44 @@ function LEC5Questionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
         </div>
       )}
 
-      <div className="export-section" style={{marginTop:'24px'}}>
-        <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)'}} onClick={() => {
-          const endorsed = items.filter((_, i) => [0,1,2,3].some(oi => answers['lec_' + i + '_' + oi])).length;
-          onAddResults(LEC5.name, LEC5.fullName, {total: endorsed, max: items.length, severity: endorsed > 0 ? endorsed + ' אירועים דווחו' : 'אין אירועים', cls: endorsed >= 5 ? 'sev-severe' : endorsed >= 2 ? 'sev-moderate' : endorsed >= 1 ? 'sev-mild' : 'sev-normal'}, {...answers});
-        }}>הוסף לתוצאות</button>
-      </div>
+      {allAnswered && (
+        <div className="export-section" style={{marginTop:'24px'}}>
+          <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em'}}>
+            ✅ השאלון הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, intake}) {
   const items = SHS.items;
   const labels = SHS.itemScaleLabels;
   const answeredCount = Object.keys(answers).filter(k => !isNaN(parseInt(k))).length;
+  const allAnswered = answeredCount === items.length;
+  const scoringResult = allAnswered ? SHS.scoring(answers) : null;
   const pct = Math.round(answeredCount / items.length * 100);
+  const hasAutoExported = React.useRef(false);
+  const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => !isNaN(parseInt(k)) && answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+
+  React.useEffect(() => {
+    if (allAnswered && scoringResult && !hasAutoExported.current) {
+      hasAutoExported.current = true;
+      onAddResults(SHS.name, SHS.fullName, scoringResult, {...answers});
+      try {
+        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+        const dateStr = new Date().toISOString().slice(0,10);
+        exportQuestionnaireExcel(SHS, answers, scoringResult, `${patName}_SHS_${dateStr}.xlsx`);
+      } catch(e) { console.error('Auto-export error:', e); }
+    }
+  }, [allAnswered]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{SHS.fullName}</h3>
       <div className="progress-text">
@@ -2334,52 +2459,50 @@ function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
       </div>
       <div style={{marginBottom:'20px',color:'#64748b',fontSize:'.9em'}}>{SHS.description}</div>
 
-      {items.map((item, i) => (
-        <div key={i} className={'q-item ' + (answers[i] != null ? 'answered' : '')} style={{marginBottom:'16px'}}>
-          <div className="q-text"><span className="q-num">{i + 1}</span> {item}</div>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.78em',color:'#64748b',marginBottom:'6px',padding:'0 4px'}}>
-            <span>{labels[i].low}</span>
-            <span>{labels[i].high}</span>
+      {items.map((item, i) => {
+        const isAnswered = answers[i] != null && answers[i] !== '';
+        const isSkipped = i < maxAnsweredIdx && !isAnswered;
+        return (
+          <div key={i} className={`q-item ${isAnswered ? 'answered' : ''} ${isSkipped ? 'skipped' : ''}`} style={{marginBottom:'16px'}}>
+            <div className="q-text"><span className="q-num">{i + 1}</span> {item}</div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:'.78em',color:'#64748b',marginBottom:'6px',padding:'0 4px'}}>
+              <span>{labels[i].low}</span>
+              <span>{labels[i].high}</span>
+            </div>
+            <div className="q-options">
+              {[1,2,3,4,5,6,7].map(v => (
+                <button key={v} className={'q-opt ' + (answers[i] == v ? 'selected' : '')}
+                  onClick={() => onAnswer(i, answers[i] == v ? null : v)}
+                  style={{minWidth:'36px',padding:'8px 4px'}}>
+                  {v}
+                </button>
+              ))}
+            </div>
+            {isSkipped && <div className="skipped-label">לא סומנה תשובה</div>}
           </div>
-          <div className="q-options">
-            {[1,2,3,4,5,6,7].map(v => (
-              <button key={v} className={'q-opt ' + (answers[i] == v ? 'selected' : '')}
-                onClick={() => onAnswer(i, answers[i] == v ? null : v)}
-                style={{minWidth:'36px',padding:'8px 4px'}}>
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
-      {answeredCount === items.length && (
+      {allAnswered && scoringResult && (
         <div className="export-section">
-          <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)',marginBottom:'12px'}} onClick={() => {
-            const el = document.getElementById('shs-results-display');
-            if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-          }}>
-            📊 הצג תוצאות
-          </button>
-          <div id="shs-results-display" style={{display:'none'}}>
-            {(() => {
-              const results = SHS.scoring(answers);
-              return (
-                <div className="result-summary">
-                  <h3>תוצאות</h3>
-                  <div className="score-display">{results.total} / {results.max}</div>
-                  <div className={'severity-badge ' + results.cls}>{results.severity}</div>
-                  <div style={{fontSize:'.82em',color:'#64748b',marginTop:'8px'}}>ציון ממוצע (פריט 4 הפוך)</div>
-                </div>
-              );
-            })()}
+          <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
+            <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => {
+              const el = document.getElementById('shs-results-display');
+              if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            }}>
+              📊 הצג תוצאות
+            </button>
           </div>
-          <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)',marginTop:'10px'}} onClick={() => {
-            const results = SHS.scoring(answers);
-            onAddResults(SHS.name, SHS.fullName, results, {...answers});
-          }}>הוסף לתוצאות</button>
+          <div id="shs-results-display" style={{display:'none'}}>
+            <div className="result-summary">
+              <h3>תוצאות</h3>
+              <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+              <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
+              <div style={{fontSize:'.82em',color:'#64748b',marginTop:'8px'}}>ציון ממוצע (פריט 4 הפוך)</div>
+            </div>
+          </div>
           <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em',marginTop:'10px'}}>
-            ✅ השאלון הושלם.
+            ✅ השאלון הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד.
           </div>
         </div>
       )}
@@ -2387,19 +2510,34 @@ function SHSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
   );
 }
 
-function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
+function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear, intake}) {
   const part1Count = MIOS.items.filter((_, i) => answers[i] !== null && answers[i] !== undefined && answers[i] !== '').length;
   const funcCount = MIOS.funcItems.filter((_, i) => answers['f_' + i] !== null && answers['f_' + i] !== undefined && answers['f_' + i] !== '').length;
   const totalItems = MIOS.items.length + MIOS.funcItems.length;
   const totalAnswered = part1Count + funcCount;
   const pct = Math.round(totalAnswered / totalItems * 100);
   const allPart1 = part1Count === MIOS.items.length;
+  const hasAutoExported = React.useRef(false);
+  const maxAnsweredIdx = Math.max(-1, ...Object.keys(answers).filter(k => !isNaN(parseInt(k)) && answers[k] !== null && answers[k] !== undefined && answers[k] !== '').map(Number));
+
+  React.useEffect(() => {
+    if (allPart1 && !hasAutoExported.current) {
+      hasAutoExported.current = true;
+      const scoringResult = MIOS.scoring(answers);
+      onAddResults(MIOS.name, MIOS.fullName, scoringResult, {...answers});
+      try {
+        const patName = intake && intake.name ? intake.name.replace(/\s/g,'_') : 'patient';
+        const dateStr = new Date().toISOString().slice(0,10);
+        exportQuestionnaireExcel(MIOS, answers, scoringResult, `${patName}_MIOS_${dateStr}.xlsx`);
+      } catch(e) { console.error('Auto-export error:', e); }
+    }
+  }, [allPart1]);
 
   return (
     <div className="section">
       <div style={{marginBottom:'20px',display:'flex',gap:'10px',flexWrap:'wrap',alignItems:'center'}}>
         <button className="back-btn" onClick={onBack}>חזור לתפריט</button>
-        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) onClear(); }}>נקה שאלון</button>
+        <button className="clear-q-btn" onClick={() => { if(confirm('לנקות את כל התשובות בשאלון זה?')) { hasAutoExported.current = false; onClear(); } }}>נקה שאלון</button>
       </div>
       <h3 className="section-title">{MIOS.fullName}</h3>
       <div style={{marginBottom:'16px',color:'#64748b',fontSize:'.9em',lineHeight:'1.6',whiteSpace:'pre-line'}}>{MIOS.description}</div>
@@ -2416,8 +2554,10 @@ function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
       <div style={{marginTop:'12px'}}>
         {MIOS.items.map((item, idx) => {
           const isReverse = MIOS.reverseItems.includes(idx);
+          const isAnswered = answers[idx] !== null && answers[idx] !== undefined && answers[idx] !== '';
+          const isSkipped = idx < maxAnsweredIdx && !isAnswered;
           return (
-            <div key={idx} style={{padding:'14px',marginBottom:'10px',borderRadius:'10px',border:'1px solid #e2e8f0',background: answers[idx] !== null && answers[idx] !== undefined && answers[idx] !== '' ? '#f0fdf4' : '#fff'}}>
+            <div key={idx} className={isSkipped ? 'skipped' : ''} style={{padding:'14px',marginBottom:'10px',borderRadius:'10px',border: isSkipped ? '2px solid #fca5a5' : '1px solid #e2e8f0',background: isAnswered ? '#f0fdf4' : '#fff'}}>
               <div style={{fontWeight:'600',color:'#1e293b',marginBottom:'10px',fontSize:'.92em'}}>
                 {idx + 1}. {item}
                 {isReverse && <span style={{fontSize:'.75em',color:'#a855f7',marginRight:'8px'}}>(R)</span>}
@@ -2431,6 +2571,7 @@ function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
                   </button>
                 ))}
               </div>
+              {isSkipped && <div className="skipped-label">לא סומנה תשובה</div>}
             </div>
           );
         })}
@@ -2466,17 +2607,19 @@ function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
         const scoringResult = MIOS.scoring(answers);
         return (
           <div className="export-section">
-            <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)',marginBottom:'12px'}} onClick={() => {
-              const el = document.getElementById('mios-results-display');
-              if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-            }}>
-              📊 הצג תוצאות
-            </button>
+            <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'12px'}}>
+              <button className="export-btn" style={{background:'linear-gradient(135deg,#7c3aed,#4c1d95)'}} onClick={() => {
+                const el = document.getElementById('mios-results-display');
+                if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+              }}>
+                📊 הצג תוצאות
+              </button>
+            </div>
             <div id="mios-results-display" style={{display:'none'}}>
               <div className="result-summary">
                 <h3>תוצאות</h3>
-                <div className="score-display">{scoringResult.total} / {scoringResult.max}</div>
-                <div className={'severity-badge ' + scoringResult.cls}>{scoringResult.severity}</div>
+                <div className="score-big">{scoringResult.total}/{scoringResult.max}</div>
+                <div className={`severity-inline ${scoringResult.cls}`}>{scoringResult.severity}</div>
                 {scoringResult.subdomains && scoringResult.subdomains.length > 0 && (
                   <div className="subdomain" style={{marginTop:'16px',textAlign:'right'}}>
                     {scoringResult.subdomains.map((sub, si) => (
@@ -2490,11 +2633,8 @@ function MIOSQuestionnaire({answers, onAnswer, onBack, onAddResults, onClear}) {
                 )}
               </div>
             </div>
-            <button className="export-btn" style={{background:'linear-gradient(135deg,#10b981,#065f46)',marginTop:'10px'}} onClick={() => {
-              onAddResults(MIOS.name, MIOS.fullName, scoringResult, {...answers});
-            }}>הוסף לתוצאות</button>
             <div style={{padding:'12px',background:'#ecfdf5',borderRadius:'8px',color:'#065f46',fontSize:'.9em',marginTop:'10px'}}>
-              ✅ חלק 1 הושלם. {funcCount === MIOS.funcItems.length ? 'חלק 2 הושלם.' : 'ניתן למלא גם את חלק 2 (פגיעה תפקודית).'}
+              ✅ חלק 1 הושלם. הנתונים נשמרו אוטומטית וקובץ Excel הורד. {funcCount === MIOS.funcItems.length ? 'חלק 2 הושלם.' : 'ניתן למלא גם את חלק 2 (פגיעה תפקודית).'}
             </div>
           </div>
         );
@@ -2998,9 +3138,16 @@ function exportQuestionnaire(name, answers, results) {
 }
 
 function exportSummaryExcel(data) {
+  const sevStyle = (cls) => {
+    if(cls === 'sev-severe') return {font:{bold:true,sz:11,color:{rgb:'991B1B'}},fill:{fgColor:{rgb:'FEE2E2'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+    if(cls === 'sev-moderate') return {font:{bold:true,sz:11,color:{rgb:'9A3412'}},fill:{fgColor:{rgb:'FED7AA'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+    if(cls === 'sev-mild') return {font:{bold:true,sz:11,color:{rgb:'854D0E'}},fill:{fgColor:{rgb:'FEF9C3'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+    return {font:{bold:true,sz:11,color:{rgb:'166534'}},fill:{fgColor:{rgb:'DCFCE7'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+  };
   const rows = [];
   rows.push([{v:'מרפאת הטראומה - הדסה', s:XS.title}]);
   rows.push([{v:'סיכום תוצאות שאלונים', s:XS.subtitle}]);
+  rows.push([{v:'תאריך: ' + new Date().toISOString().slice(0,10),s:{font:{sz:10,color:{rgb:'64748B'}},alignment:{horizontal:'right'}}}]);
   rows.push(['']);
   rows.push([{v:'שאלון',s:XS.headerRowRight},{v:'ציון כולל',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow},{v:'רמת חומרה',s:XS.headerRow}]);
   let ri = 0;
@@ -3008,7 +3155,7 @@ function exportSummaryExcel(data) {
     if(result.results) {
       const rs = ri % 2 === 0 ? XS.evenRow : XS.oddRow;
       const rc = ri % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
-      rows.push([{v:result.qname,s:rs},{v:result.results.total,s:rc},{v:result.results.max,s:rc},{v:result.results.severity,s:rs}]);
+      rows.push([{v:result.qname,s:rs},{v:result.results.total,s:rc},{v:result.results.max,s:rc},{v:result.results.severity,s:sevStyle(result.results.cls)}]);
       ri++;
     }
   });
@@ -3021,44 +3168,53 @@ function exportSummaryExcel(data) {
 }
 
 function exportFullDetailedExcel(data) {
+  const sevStyle = (cls) => {
+    if(cls === 'sev-severe') return {font:{bold:true,sz:11,color:{rgb:'991B1B'}},fill:{fgColor:{rgb:'FEE2E2'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+    if(cls === 'sev-moderate') return {font:{bold:true,sz:11,color:{rgb:'9A3412'}},fill:{fgColor:{rgb:'FED7AA'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+    if(cls === 'sev-mild') return {font:{bold:true,sz:11,color:{rgb:'854D0E'}},fill:{fgColor:{rgb:'FEF9C3'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+    return {font:{bold:true,sz:11,color:{rgb:'166534'}},fill:{fgColor:{rgb:'DCFCE7'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'E2E8F0'}}}};
+  };
   const wb = XLSX.utils.book_new();
   // Summary sheet
   const summaryRows = [];
   summaryRows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
   summaryRows.push([{v:'דו"ח מפורט - תוצאות שאלונים',s:XS.subtitle}]);
+  summaryRows.push([{v:'תאריך: ' + new Date().toISOString().slice(0,10),s:{font:{sz:10,color:{rgb:'64748B'}},alignment:{horizontal:'right'}}}]);
   summaryRows.push(['']);
-  summaryRows.push([{v:'שאלון',s:XS.headerRowRight},{v:'ציון כולל',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow},{v:'רמת חומרה',s:XS.headerRow}]);
+  summaryRows.push([{v:'שאלון',s:XS.headerRowRight},{v:'שם מלא',s:XS.headerRowRight},{v:'ציון כולל',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow},{v:'רמת חומרה',s:XS.headerRow}]);
   let ri = 0;
   Object.entries(data).forEach(([k, result]) => {
     if(result.results) {
       const rs = ri % 2 === 0 ? XS.evenRow : XS.oddRow;
       const rc = ri % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
-      summaryRows.push([{v:result.qname,s:rs},{v:result.results.total,s:rc},{v:result.results.max,s:rc},{v:result.results.severity,s:rs}]);
+      summaryRows.push([{v:k,s:rs},{v:result.qname,s:rs},{v:result.results.total,s:rc},{v:result.results.max,s:rc},{v:result.results.severity,s:sevStyle(result.results.cls)}]);
       ri++;
     }
   });
   const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
-  styleSheet(summaryWs, [40, 14, 14, 25]);
-  summaryWs['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
+  styleSheet(summaryWs, [15, 40, 14, 14, 25]);
+  summaryWs['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
   XLSX.utils.book_append_sheet(wb, summaryWs, 'סיכום');
 
   // Per-questionnaire sheets with full Q&A
   Object.entries(data).forEach(([key, result]) => {
     if(result.results) {
       const rows = [];
-      rows.push([{v:'שאלון',s:XS.labelCell},{v:result.qname,s:XS.valueCellRight}]);
-      rows.push([{v:'ציון כולל',s:XS.labelCell},{v:result.results.total,s:XS.valueCell}]);
-      rows.push([{v:'מקסימום',s:XS.labelCell},{v:result.results.max,s:XS.valueCell}]);
-      rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:result.results.severity,s:XS.severity}]);
+      rows.push([{v:result.qname,s:XS.title}]);
+      rows.push([{v:'תאריך: ' + new Date().toISOString().slice(0,10),s:{font:{sz:10,color:{rgb:'64748B'}},alignment:{horizontal:'right'}}}]);
+      rows.push(['']);
+      rows.push([{v:'ציון כולל',s:XS.labelCell},{v:result.results.total,s:XS.valueCell},{v:'מתוך ' + result.results.max,s:XS.valueCellRight}]);
+      rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:result.results.severity,s:sevStyle(result.results.cls)}]);
       rows.push(['']);
       if(result.results.subdomains && result.results.subdomains.length > 1) {
         rows.push([{v:'תת-תחומים',s:XS.sectionHeader}]);
-        rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow}]);
+        rows.push([{v:'תת-תחום',s:XS.headerRowRight},{v:'ציון',s:XS.headerRow},{v:'מקסימום',s:XS.headerRow},{v:'רמת חומרה',s:XS.headerRow}]);
         let si = 0;
         result.results.subdomains.filter(sub => sub.name).forEach(sub => {
           const rs = si % 2 === 0 ? XS.evenRow : XS.oddRow;
           const rc = si % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
-          rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc}]);
+          const subPct = sub.max > 0 ? Math.round(sub.score/sub.max*100) : 0;
+          rows.push([{v:sub.name,s:rs},{v:sub.score,s:rc},{v:sub.max,s:rc},{v:subPct + '%',s:rc}]);
           si++;
         });
         rows.push(['']);
@@ -3087,8 +3243,22 @@ function exportFullDetailedExcel(data) {
           rows.push([{v:idx+1,s:rc},{v:qText,s:rs},{v:ansVal !== null && ansVal !== undefined ? ansVal : '',s:rc},{v:ansText,s:rs}]);
         });
       }
+      // Handle special questionnaires with non-standard answer keys (LEC-5, C-SSRS, etc.)
+      if(result.answers && result.questionnaire && !result.questionnaire.items && result.questionnaire.name === 'LEC-5') {
+        rows.push([{v:'תשובות',s:XS.sectionHeader}]);
+        rows.push([{v:'מספר',s:XS.headerRow},{v:'אירוע',s:XS.headerRowRight},{v:'תשובה',s:XS.headerRowRight}]);
+        const lec = result.questionnaire;
+        lec.items && lec.items.forEach((item, idx) => {
+          const rs = idx%2===0?XS.evenRow:XS.oddRow;
+          const rc = idx%2===0?XS.evenRowCenter:XS.oddRowCenter;
+          const val = result.answers['lec_' + idx];
+          const ansText = val !== null && val !== undefined ? lec.responseOptions[val] : '';
+          rows.push([{v:idx+1,s:rc},{v:item,s:rs},{v:ansText,s:rs}]);
+        });
+      }
       const ws = XLSX.utils.aoa_to_sheet(rows);
       styleSheet(ws, [8, 50, 10, 30]);
+      ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}}];
       XLSX.utils.book_append_sheet(wb, ws, key.substring(0,31));
     }
   });
@@ -3097,11 +3267,11 @@ function exportFullDetailedExcel(data) {
 
 function exportQuestionnaireExcel(q, answers, scoringResult, customFilename) {
   const rows = [];
-  rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title}]);
-  rows.push([{v:q.fullName,s:XS.subtitle}]);
+  rows.push([{v:'מרפאת הטראומה - הדסה',s:XS.title},'','']);
+  rows.push([{v:q.fullName,s:XS.subtitle},'','']);
+  rows.push([{v:'תאריך: ' + new Date().toISOString().slice(0,10),s:{font:{sz:10,color:{rgb:'64748B'}},alignment:{horizontal:'right'}}}]);
   rows.push(['']);
-  rows.push([{v:'ציון כולל',s:XS.labelCell},{v:scoringResult.total,s:XS.valueCell}]);
-  rows.push([{v:'מקסימום',s:XS.labelCell},{v:scoringResult.max,s:XS.valueCell}]);
+  rows.push([{v:'ציון כולל',s:XS.labelCell},{v:scoringResult.total,s:XS.valueCell},{v:'מתוך ' + scoringResult.max,s:XS.valueCellRight}]);
   rows.push([{v:'רמת חומרה',s:XS.labelCell},{v:scoringResult.severity,s:XS.severity}]);
   rows.push(['']);
   if(scoringResult.subdomains && scoringResult.subdomains.length > 0) {
@@ -3116,19 +3286,32 @@ function exportQuestionnaireExcel(q, answers, scoringResult, customFilename) {
     });
     rows.push(['']);
   }
-  rows.push([{v:'תשובות',s:XS.sectionHeader}]);
-  rows.push([{v:'שאלה',s:XS.headerRowRight},{v:'תשובה',s:XS.headerRow}]);
+  rows.push([{v:'שאלות ותשובות',s:XS.sectionHeader}]);
+  rows.push([{v:'מספר',s:XS.headerRow},{v:'שאלה',s:XS.headerRowRight},{v:'ערך',s:XS.headerRow},{v:'תשובה',s:XS.headerRowRight}]);
   if(q.items) {
     q.items.forEach((item, idx) => {
       const qText = typeof item === 'string' ? item : item.q;
+      const ansVal = answers[idx];
+      let ansText = '';
+      if(ansVal !== null && ansVal !== undefined && ansVal !== '') {
+        if(q.scale) {
+          const opt = q.scale.find(s => s.v == ansVal);
+          ansText = opt ? opt.l : String(ansVal);
+        } else if(typeof item === 'object' && item.opts) {
+          const opt = item.opts.find(o => o.v == ansVal);
+          ansText = opt ? opt.l : String(ansVal);
+        } else {
+          ansText = String(ansVal);
+        }
+      }
       const rs = idx % 2 === 0 ? XS.evenRow : XS.oddRow;
       const rc = idx % 2 === 0 ? XS.evenRowCenter : XS.oddRowCenter;
-      rows.push([{v:qText,s:rs},{v:answers[idx] !== null && answers[idx] !== undefined ? answers[idx] : '',s:rc}]);
+      rows.push([{v:idx+1,s:rc},{v:qText,s:rs},{v:ansVal !== null && ansVal !== undefined ? ansVal : '',s:rc},{v:ansText,s:rs}]);
     });
   }
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  styleSheet(ws, [50, 15, 15]);
-  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}];
+  styleSheet(ws, [8, 50, 10, 30]);
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, q.name);
   XLSX.writeFile(wb, customFilename || `${q.name}_results.xlsx`);
@@ -3457,21 +3640,21 @@ function App() {
       }
       if (q.name === 'C-SSRS') {
         return (
-          <ColumbiaQuestionnaire answers={answers} onAnswer={(key, val) => {
+          <ColumbiaQuestionnaire answers={answers} intake={intake} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
           }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
       }
       if (q.name === 'LEC-5') {
         return (
-          <LEC5Questionnaire answers={answers} onAnswer={(key, val) => {
+          <LEC5Questionnaire answers={answers} intake={intake} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
           }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
       }
       if (q.name === 'SHS') {
         return (
-          <SHSQuestionnaire answers={answers} onAnswer={(key, val) => {
+          <SHSQuestionnaire answers={answers} intake={intake} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
           }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
@@ -3488,7 +3671,7 @@ function App() {
       }
       if (q.name === 'MIOS') {
         return (
-          <MIOSQuestionnaire answers={answers} onAnswer={(key, val) => {
+          <MIOSQuestionnaire answers={answers} intake={intake} onAnswer={(key, val) => {
             const newAns = {...answers}; newAns[key] = val; setAnswers(newAns);
           }} onBack={goBackToMenu} onAddResults={addToResults} onClear={clearCurrentAnswers} />
         );
