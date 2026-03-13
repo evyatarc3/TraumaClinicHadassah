@@ -564,31 +564,63 @@ const DASS21 = {
 
 const PCL5 = {
   name: "PCL-5",
-  fullName: "שאלון PTSD - PCL-5",
-  description: "קריטריון A: תאר/י בקצרה את האירוע הטראומטי. לאחר מכן, ענה/י על השאלות הבאות לפי מידת ההטרדה בחודש האחרון.",
+  fullName: "שאלון PTSD - PCL-5 (Extended A)",
+  description: "שאלון זה שואל על בעיות שאולי היו לך לאחר חוויה מאוד מלחיצה שעירבה מוות בפועל או איום במוות, פציעה רצינית, או אלימות מינית. זה יכול להיות משהו שקרה לך באופן ישיר, משהו שהיית עד/ה לו, או משהו שגילית שקרה לבן משפחה קרוב או חבר קרוב.",
   hasCriterionA: true,
-  scale: [{v:0,l:"כלל לא"},{v:1,l:"מעט"},{v:2,l:"במידה בינונית"},{v:3,l:"במידה רבה"},{v:4,l:"במידה רבה מאוד"}],
+  criterionAExtended: true,
+  criterionAFields: {
+    screening: {
+      text: "האם אי פעם חווית אירוע מלחיץ/טראומה בסדר גודל שכזה?",
+      options: ["כן", "לא", "אני לא בטוח/ה"]
+    },
+    eventDescription: {
+      text: "במידה וכן חווית אירוע מסוג זה, או שאת/ה מאמין/ה שייתכן כי חווית אירוע כזה, ציין בקצרה מהו האירוע הקשה ביותר מבחינתך (אם את/ה מרגיש/ה בנוח לעשות זאת):"
+    },
+    timeframe: {
+      text: "לפני כמה זמן זה קרה? (אנא הערך/העריכי אם אינך בטוח/ה)"
+    },
+    involvedThreat: {
+      text: "האם זה עירב מוות אמיתי או איום במוות, פציעה חמורה, או אלימות מינית?",
+      options: ["כן", "לא"]
+    },
+    exposureType: {
+      text: "כיצד חווית זאת?",
+      options: [
+        "זה קרה לי באופן ישיר",
+        "הייתי עד/ה לזה",
+        "גיליתי שזה קרה לבן משפחה קרוב או חבר קרוב",
+        "נחשפתי לפרטים של זה באופן חוזר ונשנה כחלק מעבודתי (למשל, פרמדיק, משטרה, צבא)",
+        "אחר"
+      ]
+    },
+    deathCircumstance: {
+      text: "אם האירוע עירב מוות של בן-משפחה קרוב או חבר קרוב, האם זה היה בעקבות תאונה או אלימות כלשהי, או שזה היה מסיבות טבעיות?",
+      options: ["תאונה או אלימות", "סיבות טבעיות", "לא רלוונטי (האירוע לא עירב מוות של בן-משפחה קרוב או חבר קרוב)"]
+    }
+  },
+  scale: [{v:0,l:"כלל לא"},{v:1,l:"במידה מועטה"},{v:2,l:"במידה בינונית"},{v:3,l:"במידה רבה"},{v:4,l:"במידה רבה מאד"}],
+  itemsIntro: "כשאת/ה מחזיק/ה בראש את האירוע הקשה ביותר הזה, קרא/י כל אחת מהבעיות שלהלן וסמני עד כמה בעיה זו הטרידה אותך בחודש האחרון.",
   items: [
-    "זיכרונות חוזרים, מטרידים ולא רצויים של החוויה המלחיצה",
-    "חלומות חוזרים ומטרידים של החוויה המלחיצה",
-    "פתאום הרגשת או פעלת כאילו החוויה המלחיצה קורה שוב (כאילו אתה שם מחדש)",
-    "הרגשת מצוקה רבה כשמשהו הזכיר לך את החוויה המלחיצה",
-    "תגובות גופניות חזקות כשמשהו הזכיר לך את החוויה המלחיצה (למשל דפיקות לב, קושי בנשימה, הזעה)",
-    "הימנעות מזיכרונות, מחשבות או רגשות הקשורים לחוויה המלחיצה",
-    "הימנעות מגירויים חיצוניים המזכירים את החוויה המלחיצה (אנשים, מקומות, שיחות, פעילויות, חפצים, מצבים)",
-    "קושי לזכור חלקים חשובים מהחוויה המלחיצה",
-    "אמונות שליליות חזקות לגבי עצמך, אחרים או העולם (למשל: אני רע, אי אפשר לסמוך על אף אחד, העולם מסוכן)",
-    "האשמת עצמך או אחרים בחוויה המלחיצה או בתוצאותיה",
-    "רגשות שליליים חזקים כמו פחד, אימה, כעס, אשמה או בושה",
-    "אובדן עניין בפעילויות שנהגת ליהנות מהן",
-    "תחושת ריחוק או ניתוק מאנשים אחרים",
-    "קושי לחוות רגשות חיוביים (למשל חוסר יכולת להרגיש אושר, אהבה)",
-    "התנהגות עצבנית, התפרצויות זעם, או התנהגות תוקפנית",
-    "לקיחת סיכונים מיותרים או התנהגות שעלולה לפגוע בך",
-    "תחושת עירנות יתר, דריכות או היות על המשמר",
-    "תחושת בהלה או הפתעה בקלות",
-    "קושי בריכוז",
-    "בעיות שינה (למשל קושי להירדם, שינה לא רציפה, שינה לא שקטה)"
+    "זיכרונות חוזרים, מטרידים ולא רצויים של החוויה המלחיצה?",
+    "חלומות חוזרים ומטרידים של החוויה המלחיצה?",
+    "פתאום להרגיש או להתנהג כאילו החוויה המלחיצה באמת מתרחשת מחדש (כאילו את/ה שם בחזרה, חי/ה את זה מחדש)?",
+    "להרגיש מאוד מוטרד/ת כשמשהו הזכיר לך את החוויה המלחיצה?",
+    "תגובות גופניות חזקות כשמשהו מזכיר לך את החוויה המלחיצה (למשל: דופק מואץ, קשיי נשימה, הזעה מוגברת)?",
+    "הימנעות מזיכרונות, מחשבות, או רגשות הקשורים לחוויה המלחיצה?",
+    "הימנעות מתזכורות חיצוניות לחוויה המלחיצה (למשל, אנשים, מקומות, שיחות, פעילויות, חפצים, או מצבים)?",
+    "קושי לזכור חלקים חשובים של החוויה המלחיצה?",
+    "אמונות שליליות עוצמתיות לגבי עצמך, אנשים אחרים, או העולם (למשל, מחשבות כגון: אני רע/ה, יש משהו מאוד פגום אצלי, אי-אפשר לסמוך על אף-אחד, העולם לגמרי מסוכן)?",
+    "מאשים/מאשימה את עצמך או מישהו אחר בחוויה המלחיצה או במה שקרה אחריה?",
+    "רגשות שליליים עוצמתיים כגון פחד, אימה, כעס, אשמה, או בושה?",
+    "אובדן עניין בפעילויות שנהנית מהן בעבר?",
+    "תחושת ריחוק או ניתוק מאנשים אחרים?",
+    "קושי לחוות רגשות חיוביים (למשל, לא יכול/ה לחוש שמחה או רגשות של אהבה כלפי אנשים קרובים אליך)?",
+    "התנהגות בחוסר-שקט/עצבנות, התפרצויות זעם, או התנהגות תוקפנית?",
+    "לוקח/ת יותר מדי סיכונים או עושה דברים שעלולים לגרום לך לפגיעה?",
+    "מעורר יתר על המידה, דרוך או \"עומד על המשמר\"?",
+    "לא רגוע, נבהל בקלות?",
+    "קושי להתרכז?",
+    "קושי להירדם או לשמור על שינה רצופה?"
   ],
   scoring: (answers) => {
     const sum = Object.values(answers).reduce((a,b) => a + (parseInt(b)||0), 0);
@@ -1319,7 +1351,106 @@ function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onCl
       </div>
       <h3 className="section-title">{q.fullName}</h3>
       <div style={{marginBottom:'20px'}}>{q.description}</div>
-      {q.hasCriterionA && (
+      {q.hasCriterionA && q.criterionAExtended && (
+        <div className="section" style={{marginBottom:'20px',background:'#f0f9ff',padding:'20px',borderRadius:'12px',border:'2px solid #bae6fd'}}>
+          <h4 style={{color:'#0c4a6e',marginBottom:'16px',fontSize:'1.05em',borderBottom:'2px solid #7dd3fc',paddingBottom:'8px'}}>קריטריון A - אירועי חיים</h4>
+
+          {/* Screening question */}
+          <div style={{marginBottom:'16px'}}>
+            <label style={{fontWeight:'600',color:'#0e7490',fontSize:'.9em',display:'block',marginBottom:'8px'}}>
+              {q.criterionAFields.screening.text}
+            </label>
+            <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+              {q.criterionAFields.screening.options.map((opt, i) => (
+                <button key={i} className={`q-opt ${answers['criterionA_screening'] === opt ? 'selected' : ''}`}
+                  onClick={() => onAnswer('criterionA_screening', answers['criterionA_screening'] === opt ? null : opt)}
+                  style={{fontSize:'.85em',padding:'8px 16px'}}>{opt}</button>
+              ))}
+            </div>
+          </div>
+
+          {answers['criterionA_screening'] === 'לא' && (
+            <div style={{background:'#fefce8',padding:'12px',borderRadius:'8px',color:'#854d0e',fontSize:'.9em'}}>
+              אם לא חווית מעולם אף אירוע מלחיץ בקנה מידה זה, ניתן לדלג על שאלון זה.
+            </div>
+          )}
+
+          {answers['criterionA_screening'] !== 'לא' && (
+            <>
+              {/* Event description */}
+              <div style={{marginBottom:'16px'}}>
+                <label style={{fontWeight:'600',color:'#0e7490',fontSize:'.9em',display:'block',marginBottom:'8px'}}>
+                  {q.criterionAFields.eventDescription.text}
+                </label>
+                <textarea className="crit-a-text" placeholder="תאר/י בקצרה את האירוע..."
+                  value={answers['criterionA'] || ''}
+                  onChange={(e) => onAnswer('criterionA', e.target.value)}
+                  style={{minHeight:'80px'}} />
+              </div>
+
+              {/* Timeframe */}
+              <div style={{marginBottom:'16px'}}>
+                <label style={{fontWeight:'600',color:'#0e7490',fontSize:'.9em',display:'block',marginBottom:'8px'}}>
+                  {q.criterionAFields.timeframe.text}
+                </label>
+                <input type="text" placeholder="למשל: לפני 3 שנים, בילדות, לפני חודשיים..."
+                  value={answers['criterionA_timeframe'] || ''}
+                  onChange={(e) => onAnswer('criterionA_timeframe', e.target.value)}
+                  style={{padding:'10px',fontSize:'.95em',border:'2px solid #bae6fd',borderRadius:'8px',width:'100%',fontFamily:'inherit',background:'#fff'}} />
+              </div>
+
+              {/* Involved threat */}
+              <div style={{marginBottom:'16px'}}>
+                <label style={{fontWeight:'600',color:'#0e7490',fontSize:'.9em',display:'block',marginBottom:'8px'}}>
+                  {q.criterionAFields.involvedThreat.text}
+                </label>
+                <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+                  {q.criterionAFields.involvedThreat.options.map((opt, i) => (
+                    <button key={i} className={`q-opt ${answers['criterionA_threat'] === opt ? 'selected' : ''}`}
+                      onClick={() => onAnswer('criterionA_threat', answers['criterionA_threat'] === opt ? null : opt)}
+                      style={{fontSize:'.85em',padding:'8px 16px'}}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Exposure type */}
+              <div style={{marginBottom:'16px'}}>
+                <label style={{fontWeight:'600',color:'#0e7490',fontSize:'.9em',display:'block',marginBottom:'8px'}}>
+                  {q.criterionAFields.exposureType.text}
+                </label>
+                <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+                  {q.criterionAFields.exposureType.options.map((opt, i) => (
+                    <button key={i} className={`q-opt ${answers['criterionAType'] === opt ? 'selected' : ''}`}
+                      onClick={() => onAnswer('criterionAType', answers['criterionAType'] === opt ? null : opt)}
+                      style={{fontSize:'.85em',padding:'8px 16px'}}>{opt}</button>
+                  ))}
+                </div>
+                {answers['criterionAType'] === 'אחר' && (
+                  <input type="text" placeholder="אנא פרט/י..."
+                    value={answers['criterionA_exposureOther'] || ''}
+                    onChange={(e) => onAnswer('criterionA_exposureOther', e.target.value)}
+                    style={{marginTop:'8px',padding:'10px',fontSize:'.95em',border:'2px solid #bae6fd',borderRadius:'8px',width:'100%',fontFamily:'inherit',background:'#fff'}} />
+                )}
+              </div>
+
+              {/* Death circumstance */}
+              <div style={{marginBottom:'8px'}}>
+                <label style={{fontWeight:'600',color:'#0e7490',fontSize:'.9em',display:'block',marginBottom:'8px'}}>
+                  {q.criterionAFields.deathCircumstance.text}
+                </label>
+                <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+                  {q.criterionAFields.deathCircumstance.options.map((opt, i) => (
+                    <button key={i} className={`q-opt ${answers['criterionA_deathCircumstance'] === opt ? 'selected' : ''}`}
+                      onClick={() => onAnswer('criterionA_deathCircumstance', answers['criterionA_deathCircumstance'] === opt ? null : opt)}
+                      style={{fontSize:'.85em',padding:'8px 16px'}}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      {q.hasCriterionA && !q.criterionAExtended && (
         <div className="section" style={{marginBottom:'20px',background:'#f8fafc',padding:'16px',borderRadius:'10px'}}>
           <h4 style={{color:'#1e3a5f',marginBottom:'8px',fontSize:'.95em'}}>קריטריון A - תיאור האירוע הטראומטי</h4>
           <textarea className="crit-a-text" placeholder="תאר/י בקצרה את האירוע הטראומטי..."
@@ -1342,6 +1473,11 @@ function StandardQuestionnaire({q, answers, onAnswer, onBack, onAddResults, onCl
       <div className="progress-wrap">
         <div className="progress-fill high" style={{width: (ansCount/q.items.length*100) + '%'}}></div>
       </div>
+      {q.itemsIntro && (
+        <div style={{marginTop:'16px',marginBottom:'12px',padding:'12px 16px',background:'#eff6ff',borderRadius:'8px',color:'#1e40af',fontSize:'.9em',fontWeight:'500',lineHeight:'1.6',border:'1px solid #bfdbfe'}}>
+          {q.itemsIntro}
+        </div>
+      )}
       <div style={{marginTop:'20px'}}>
         {q.items.map((item, idx) => (
           <StandardQuestion key={idx} item={item} idx={idx} qnum={idx}
@@ -3240,6 +3376,34 @@ function exportQuestionnaireExcel(q, answers, scoringResult, customFilename) {
       si++;
     });
     rows.push(['']);
+  }
+  // Criterion A Extended export
+  if(q.criterionAExtended && q.criterionAFields) {
+    rows.push([{v:'קריטריון A - אירועי חיים',s:XS.sectionHeader}]);
+    const critARows = [
+      {label: q.criterionAFields.screening.text, key: 'criterionA_screening'},
+      {label: q.criterionAFields.eventDescription.text, key: 'criterionA'},
+      {label: q.criterionAFields.timeframe.text, key: 'criterionA_timeframe'},
+      {label: q.criterionAFields.involvedThreat.text, key: 'criterionA_threat'},
+      {label: q.criterionAFields.exposureType.text, key: 'criterionAType'},
+      {label: q.criterionAFields.deathCircumstance.text, key: 'criterionA_deathCircumstance'}
+    ];
+    critARows.forEach((row, ri) => {
+      const rs = ri % 2 === 0 ? XS.evenRow : XS.oddRow;
+      const val = answers[row.key] || '';
+      rows.push([{v:row.label,s:rs},{v:val,s:rs}]);
+    });
+    if(answers['criterionAType'] === 'אחר' && answers['criterionA_exposureOther']) {
+      rows.push([{v:'פירוט אחר:',s:XS.oddRow},{v:answers['criterionA_exposureOther'],s:XS.oddRow}]);
+    }
+    rows.push(['']);
+  } else if(q.hasCriterionA) {
+    if(answers['criterionA'] || answers['criterionAType']) {
+      rows.push([{v:'קריטריון A',s:XS.sectionHeader}]);
+      if(answers['criterionA']) rows.push([{v:'תיאור האירוע',s:XS.evenRow},{v:answers['criterionA'],s:XS.evenRow}]);
+      if(answers['criterionAType']) rows.push([{v:'סוג חשיפה',s:XS.oddRow},{v:answers['criterionAType'],s:XS.oddRow}]);
+      rows.push(['']);
+    }
   }
   rows.push([{v:'שאלות ותשובות',s:XS.sectionHeader}]);
   rows.push([{v:'מספר',s:XS.headerRow},{v:'שאלה',s:XS.headerRowRight},{v:'ערך',s:XS.headerRow},{v:'תשובה',s:XS.headerRowRight}]);
